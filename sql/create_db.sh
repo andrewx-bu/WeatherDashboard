@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# test git connection - Jeremy
 # Check if the database file already exists
 if [ -f "$DB_PATH" ]; then
     echo "Recreating database at $DB_PATH."
