@@ -1,15 +1,15 @@
 import logging
 from typing import List
-from music_collection.models.song_model import Song, update_play_count
-from music_collection.utils.logger import configure_logger
+from book_collection.models.book_model import Book, update_play_count
+from book_collection.utils.logger import configure_logger
 
 logger = logging.getLogger(__name__)
 configure_logger(logger)
 
 
-class PlaylistModel:
+class BooklistModel:
     """
-    A class to manage a playlist of songs.
+    A class to manage a booklist of books.
 
     Attributes:
         current_track_number (int): The current track number being played.
