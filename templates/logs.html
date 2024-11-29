@@ -7,6 +7,8 @@
 </head>
 <body>
     <h1>Weather Logs</h1>
+
+    <!-- Weather Logs List -->
     <ul>
       {% for log in logs %}
         <li>{{ log['city'] }} - {{ log['temperature'] }}°F at {{ log['timestamp'] }}</li>

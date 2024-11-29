@@ -3,16 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Results</title>
+    <title>Weather Information</title>
 </head>
 <body>
-    <h1>Weather in {{ weather['name'] }}</h1>
-    <p>Temperature: {{ weather['main']['temp'] }}°F</p>
-    <p>Feels Like: {{ feels_like }}°F</p>
-    <p>Humidity: {{ humidity }}%</p>
-    <p>Wind Speed: {{ wind_speed }} mph {{ wind_direction}}</p>
+    <h1>Weather Information</h1>
 
-    <a href="/">Go Back</a>
+    <!-- Error Msg -->
+    {% if error_message %}
+    <div style="color: red;">
+        <p>{{ error_message }}</p>
+    </div>
+    {% endif %}
+
+    {% if weather %}
+    <!-- Weather Data if Found -->
+        <h2>Weather in {{ weather['name'] }}</h2>
+        <p>Temperature: {{ weather['main']['temp'] }} °F</p>
+        <p>Feels like: {{ feels_like }} °F</p>
+        <p>Humidity: {{ humidity }}%</p>
+        <p>Wind speed: {{ wind_speed }} mph {{ wind_direction }}</p>
+    {% else %}
+        <p>No weather data available.</p>
+    {% endif %}
+
+    <br>
+    <a href="/">Go back to enter a new city</a>
     <a href="/logs">View Logs</a>
 </body>
 </html>

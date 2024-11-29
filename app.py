@@ -9,7 +9,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Connect to the SQLite database
+# Connect to db
 def get_db_connection():
     conn = sqlite3.connect('weather.db')
     conn.row_factory = sqlite3.Row  # Access rows as dictionaries
@@ -28,6 +28,7 @@ def get_weather():
     data = response.json()
 
     if response.status_code == 200:
+        # Save weather data
         temperature = data['main']['temp']
         feels_like = data['main']['feels_like']
         humidity = data['main']['humidity']
@@ -35,21 +36,24 @@ def get_weather():
         wind_deg = data['wind']['deg']
         wind_direction = convert_wind_deg_to_direction(wind_deg)
 
-        # Save to the database (optional, you can choose to save these additional values)
+        # Add weather data to database
         conn = sqlite3.connect('weather.db')
         cursor = conn.cursor()
         cursor.execute("INSERT INTO weather_log (city, temperature, feels_like, humidity, wind_speed, wind_direction) VALUES (?, ?, ?, ?, ?, ?)",
-                       (city, temperature, feels_like, humidity, wind_speed, wind_direction))
+                        (city, temperature, feels_like, humidity, wind_speed, wind_direction))
         conn.commit()
         conn.close()
 
+        # Return weather data to template
         return render_template('weather.html', weather=data, feels_like=feels_like, humidity=humidity, wind_speed=wind_speed, wind_direction=wind_direction)
     else:
-        error_message = "City not found or error fetching weather data"
-        return render_template('weather.html', error_message=error_message)
-
+        # Invalid city error (status code 404)
+        error_message = "The city you entered was not found. Please try again."
+        return render_template('weather.html', weather=None, error_message=error_message)
+    
 @app.route('/logs')
 def logs():
+    # Shows logs ordered by most recent entries
     conn = get_db_connection()
     logs = conn.execute('SELECT * FROM weather_log ORDER BY timestamp DESC').fetchall()
     conn.close()
