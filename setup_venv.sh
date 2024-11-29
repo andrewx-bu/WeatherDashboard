@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the name of the virtual environment directory
-VENV_DIR="meal_max_venv"
+VENV_DIR="venv"
 REQUIREMENTS_FILE="requirements.lock"
 
 # Check if the virtual environment already exists
@@ -9,7 +9,8 @@ if [ ! -d "$VENV_DIR" ]; then
   echo "Creating virtual environment..."
   python -m venv "$VENV_DIR"
 
-  source "$VENV_DIR/bin/activate"
+  # /bin for Mac
+  source "$VENV_DIR/Scripts/activate"
 
   # Install dependencies from requirements.lock if it exists
   if [ -f "$REQUIREMENTS_FILE" ]; then
