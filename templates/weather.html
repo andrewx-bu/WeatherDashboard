@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Results</title>
+</head>
+<body>
+    <h1>Weather in {{ weather['name'] }}</h1>
+    <p>Temperature: {{ weather['main']['temp'] }}°F</p>
+    <p>Description: {{ weather['weather'][0]['description'] }}</p>
+    <a href="/">Go Back</a>
+    <a href="/logs">View Logs</a>
+</body>
+</html>
