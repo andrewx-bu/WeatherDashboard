@@ -3,6 +3,7 @@ from flask import Flask, render_template, request
 import requests
 import sqlite3
 from dotenv import load_dotenv
+from helpers import convert_wind_deg_to_direction
 
 load_dotenv()
 
@@ -13,26 +14,6 @@ def get_db_connection():
     conn = sqlite3.connect('weather.db')
     conn.row_factory = sqlite3.Row  # Access rows as dictionaries
     return conn
-
-def convert_wind_deg_to_direction(deg):
-    if deg >= 337.5 or deg < 22.5:
-        return "N"
-    elif 22.5 <= deg < 67.5:
-        return "NE"
-    elif 67.5 <= deg < 112.5:
-        return "E"
-    elif 112.5 <= deg < 157.5:
-        return "SE"
-    elif 157.5 <= deg < 202.5:
-        return "S"
-    elif 202.5 <= deg < 247.5:
-        return "SW"
-    elif 247.5 <= deg < 292.5:
-        return "W"
-    elif 292.5 <= deg < 337.5:
-        return "NW"
-    else:
-        return "?"
 
 @app.route('/')
 def index():

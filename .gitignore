@@ -1,6 +1,4 @@
-# Environments
 .env
 .venv
-
-# db File
 weather.db
+__pycache__/
