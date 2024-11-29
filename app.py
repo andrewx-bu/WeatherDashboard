@@ -14,6 +14,26 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row  # Access rows as dictionaries
     return conn
 
+def convert_wind_deg_to_direction(deg):
+    if deg >= 337.5 or deg < 22.5:
+        return "N"
+    elif 22.5 <= deg < 67.5:
+        return "NE"
+    elif 67.5 <= deg < 112.5:
+        return "E"
+    elif 112.5 <= deg < 157.5:
+        return "SE"
+    elif 157.5 <= deg < 202.5:
+        return "S"
+    elif 202.5 <= deg < 247.5:
+        return "SW"
+    elif 247.5 <= deg < 292.5:
+        return "W"
+    elif 292.5 <= deg < 337.5:
+        return "NW"
+    else:
+        return "?"
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -26,15 +46,26 @@ def get_weather():
     response = requests.get(url)
     data = response.json()
 
-    # Save data to the database if successful
     if response.status_code == 200:
-        conn = get_db_connection()
-        conn.execute('INSERT INTO weather_log (city, temperature) VALUES (?, ?)',
-                     (data['name'], data['main']['temp']))
+        temperature = data['main']['temp']
+        feels_like = data['main']['feels_like']
+        humidity = data['main']['humidity']
+        wind_speed = data['wind']['speed']
+        wind_deg = data['wind']['deg']
+        wind_direction = convert_wind_deg_to_direction(wind_deg)
+
+        # Save to the database (optional, you can choose to save these additional values)
+        conn = sqlite3.connect('weather.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO weather_log (city, temperature, feels_like, humidity, wind_speed, wind_direction) VALUES (?, ?, ?, ?, ?, ?)",
+                       (city, temperature, feels_like, humidity, wind_speed, wind_direction))
         conn.commit()
         conn.close()
 
-    return render_template('weather.html', weather=data)
+        return render_template('weather.html', weather=data, feels_like=feels_like, humidity=humidity, wind_speed=wind_speed, wind_direction=wind_direction)
+    else:
+        error_message = "City not found or error fetching weather data"
+        return render_template('weather.html', error_message=error_message)
 
 @app.route('/logs')
 def logs():

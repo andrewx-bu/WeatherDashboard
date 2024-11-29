@@ -8,7 +8,10 @@
 <body>
     <h1>Weather in {{ weather['name'] }}</h1>
     <p>Temperature: {{ weather['main']['temp'] }}°F</p>
-    <p>Description: {{ weather['weather'][0]['description'] }}</p>
+    <p>Feels Like: {{ feels_like }}°F</p>
+    <p>Humidity: {{ humidity }}%</p>
+    <p>Wind Speed: {{ wind_speed }} mph {{ wind_direction}}</p>
+
     <a href="/">Go Back</a>
     <a href="/logs">View Logs</a>
 </body>
