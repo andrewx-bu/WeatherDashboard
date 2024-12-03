@@ -75,30 +75,6 @@ def db_check():
         logging.error(f"Database check failed: {e}")
         return make_response(jsonify({'error': str(e)}), 404)
 
-# Route to get coordinates of a city
-@app.route('/api/coords', methods=['GET'])
-def coords():
-    """
-    GET: Fetch coordinates for a city.
-
-    Query Parameters:
-        - city (str): Name of the city.
-        - country_code (str, optional): Country code.
-
-    Returns:
-        Response: JSON response containing latitude and longitude.
-    """
-    city = request.args.get('city')
-    country_code = request.args.get('country_code', None)
-
-    if not city:
-        return make_response(jsonify({'error': 'City is required'}), 400)
-
-    coords = get_coords(city, country_code)
-    if coords:
-        return make_response(jsonify({'coordinates': coords}), 200)
-    else:
-        return make_response(jsonify({'error': 'Could not fetch coordinates'}), 500)
 
 # Route to add a favorite location
 @app.route('/api/add-favorite', methods=['POST'])
@@ -154,52 +130,6 @@ def add_favorite():
         logging.error(f"Error adding favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
-# Route to get all favorites for a user
-@app.route('/api/get-favorites', methods=['GET'])
-def get_favorites():
-    """
-    GET: Retrieves all favorite locations for a given user.
-
-    Query Parameters:
-        - user_id (str): The ID of the user whose favorites are being request
-
-    Returns:
-        Response: JSON response with a list of favorite locations.
-    
-    Raises:
-        400 error if missing input.
-        500 error if there is an issue fetching favorites
-    """
-    try:
-        user_id = request.args.get('user_id')
-
-        # Validate input
-        if not user_id:
-            logging.warning("user_id missing in request.")
-            return make_response(jsonify({'error': 'user_id is required'}), 400)
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Query to get all favorites for the user
-        cursor.execute('SELECT id, location FROM favorites WHERE user_id = ?', (user_id,))
-        favorites = cursor.fetchall()
-
-        conn.close()
-
-        if not favorites:
-            return make_response(jsonify({'message': 'No favorites found'}), 404)
-
-        # Prepare the response data
-        favorite_locations = [{'id': fav[0], 'location': fav[1]} for fav in favorites]
-
-        logging.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
-        return make_response(jsonify({'favorites': favorite_locations}), 200)
-
-    except Exception as e:
-        logging.error(f"Error fetching favorites: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
 # Route to remove a favorite location for a user
 @app.route('/api/remove-favorite', methods=['POST'])
 def remove_favorite():
@@ -251,44 +181,6 @@ def remove_favorite():
         logging.error(f"Error removing favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
-# Route to clear all favorites for a user
-@app.route('/api/clear-favorites', methods=['POST'])
-def clear_favorites():
-    """
-    POST: Removes all favorite locations from from the database.
-
-    Expected JSON Input:
-        - user_id (str): The ID of the user whose favorite locations are to be removed.
-
-    Returns:
-        Response: JSON response with status and message.
-
-    Raises:
-        400 error if missing input.
-        500 error if there is an issue removing the favorites from the database.
-    """
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-
-        if not user_id:
-            logging.warning("user_id missing in request.")
-            return make_response(jsonify({'error': 'user_id is required'}), 400)
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('DELETE FROM favorites WHERE user_id = ?', (user_id,))
-        conn.commit()
-        conn.close()
-
-        logging.info(f"All favorite locations removed for user {user_id}.")
-        return make_response(jsonify({'status': 'success', 'message': 'All favorite locations removed'}), 200)
-
-    except Exception as e:
-        logging.error(f"Error clearing favorites: {e}")
-        return make_response(jsonify({'error': str(e)}), 500)
-
 # Route to update a favorite for a user
 @app.route('/api/update-favorite', methods=['POST'])
 def update_favorite():
@@ -331,6 +223,116 @@ def update_favorite():
     except Exception as e:
         logging.error(f"Error updating favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
+
+# Route to clear all favorites for a user
+@app.route('/api/clear-favorites', methods=['POST'])
+def clear_favorites():
+    """
+    POST: Removes all favorite locations from from the database.
+
+    Expected JSON Input:
+        - user_id (str): The ID of the user whose favorite locations are to be removed.
+
+    Returns:
+        Response: JSON response with status and message.
+
+    Raises:
+        400 error if missing input.
+        500 error if there is an issue removing the favorites from the database.
+    """
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+
+        if not user_id:
+            logging.warning("user_id missing in request.")
+            return make_response(jsonify({'error': 'user_id is required'}), 400)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('DELETE FROM favorites WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
+
+        logging.info(f"All favorite locations removed for user {user_id}.")
+        return make_response(jsonify({'status': 'success', 'message': 'All favorite locations removed'}), 200)
+
+    except Exception as e:
+        logging.error(f"Error clearing favorites: {e}")
+        return make_response(jsonify({'error': str(e)}), 500)
+
+# Route to get all favorites for a user
+@app.route('/api/get-favorites', methods=['GET'])
+def get_favorites():
+    """
+    GET: Retrieves all favorite locations for a given user.
+
+    Query Parameters:
+        - user_id (str): The ID of the user whose favorites are being request
+
+    Returns:
+        Response: JSON response with a list of favorite locations.
+    
+    Raises:
+        400 error if missing input.
+        500 error if there is an issue fetching favorites
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        # Validate input
+        if not user_id:
+            logging.warning("user_id missing in request.")
+            return make_response(jsonify({'error': 'user_id is required'}), 400)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Query to get all favorites for the user
+        cursor.execute('SELECT id, location FROM favorites WHERE user_id = ?', (user_id,))
+        favorites = cursor.fetchall()
+
+        conn.close()
+
+        if not favorites:
+            return make_response(jsonify({'message': 'No favorites found'}), 404)
+
+        # Prepare the response data
+        favorite_locations = [{'id': fav[0], 'location': fav[1]} for fav in favorites]
+
+        logging.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
+        return make_response(jsonify({'favorites': favorite_locations}), 200)
+
+    except Exception as e:
+        logging.error(f"Error fetching favorites: {e}")
+        return make_response(jsonify({'error': str(e)}), 500)
+
+
+# Route to get coordinates of a city
+@app.route('/api/coords', methods=['GET'])
+def coords():
+    """
+    GET: Fetch coordinates for a city.
+
+    Query Parameters:
+        - city (str): Name of the city.
+        - country_code (str, optional): Country code.
+
+    Returns:
+        Response: JSON response containing latitude and longitude.
+    """
+    city = request.args.get('city')
+    country_code = request.args.get('country_code', None)
+
+    if not city:
+        return make_response(jsonify({'error': 'City is required'}), 400)
+
+    coords = get_coords(city, country_code)
+    if coords:
+        return make_response(jsonify({'coordinates': coords}), 200)
+    else:
+        return make_response(jsonify({'error': 'Could not fetch coordinates'}), 500)
 
 # Route to get weather forecast for a city
 @app.route('/api/forecast', methods=['GET'])
