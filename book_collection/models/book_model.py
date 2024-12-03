@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import logging
 import os
 import sqlite3
+import requests # for API call
 
 from music_collection.utils.logger import configure_logger
 from music_collection.utils.random_utils import get_random
@@ -27,6 +28,51 @@ class Song:
         if self.year <= 1900:
             raise ValueError(f"Year must be greater than 1900, got {self.year}")
 
+def weather_book() -> None: #Book is the new object instead of Song, all other instances should be modified
+    """
+    Creates a new song in the songs table.
+
+    Args:
+        artist (str): The artist's name.
+        title (str): The song title.
+        year (int): The year the song was released.
+        genre (str): The song genre.
+        duration (int): The duration of the song in seconds.
+
+    Raises:
+        ValueError: If year or duration are invalid.
+        sqlite3.IntegrityError: If a song with the same compound key (artist, title, year) already exists.
+        sqlite3.Error: For any other database errors.
+    """
+    # API key
+    API_KEY = "your_api_key"
+
+    # URL for current Weather API
+    BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
+
+    # Params
+    params = {
+        "q": "Boston",  # City
+        "appid": API_KEY,  # API key
+        "units": "imperial"  # 'imperial' for Fahrenheit
+    }
+
+    try:
+        response = requests.get(BASE_URL, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            ### just printing weather description
+            # print(f"City: {data['name']}")
+            # print(f"Temperature: {data['main']['temp']}°C")
+            print(f"Weather: {data['weather'][0]['description']}")
+            return None
+        else:
+            print('Error:', response.status_code)
+            return None
+    except requests.exceptions.RequestException as e:
+        print('Error:', e)
+        return None
 
 def create_song(artist: str, title: str, year: int, genre: str, duration: int) -> None:
     """
