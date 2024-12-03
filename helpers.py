@@ -1,3 +1,5 @@
+# Helper functions
+
 def convert_wind_deg_to_direction(deg: float) -> str:
     """
     Converts wind degree (0 to 360) to cardinal direction.
