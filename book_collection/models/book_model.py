@@ -3,6 +3,7 @@ import logging
 import os
 import sqlite3
 import requests # for API call
+from dotenv import load_dotenv # for accessing hidden variables in .env file
 
 from music_collection.utils.logger import configure_logger
 from music_collection.utils.random_utils import get_random
@@ -28,24 +29,24 @@ class Song:
         if self.year <= 1900:
             raise ValueError(f"Year must be greater than 1900, got {self.year}")
 
-def weather_book() -> None: #Book is the new object instead of Song, all other instances should be modified
+def weather() -> None: # just prints current weather description of Boston
     """
-    Creates a new song in the songs table.
-
+    Prints the current weather description of Boston using API Call to OpenWeather Weather API
+    
     Args:
-        artist (str): The artist's name.
-        title (str): The song title.
-        year (int): The year the song was released.
-        genre (str): The song genre.
-        duration (int): The duration of the song in seconds.
+        If we need to accept arguments, just take for example city as input
+
+    Returns: 
+        None
 
     Raises:
-        ValueError: If year or duration are invalid.
-        sqlite3.IntegrityError: If a song with the same compound key (artist, title, year) already exists.
-        sqlite3.Error: For any other database errors.
+        If we need to test this we can have us input the city for example
+        and then raise an error if it doesn't match "Boston"
     """
+
+    load_dotenv()
     # API key
-    API_KEY = "your_api_key"
+    API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
     # URL for current Weather API
     BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
@@ -57,6 +58,7 @@ def weather_book() -> None: #Book is the new object instead of Song, all other i
         "units": "imperial"  # 'imperial' for Fahrenheit
     }
 
+    # might change and remove try except...
     try:
         response = requests.get(BASE_URL, params=params)
 
