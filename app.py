@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, make_response, jsonify
+from flask import Flask, request, make_response, jsonify
 import requests
 import sqlite3
 from dotenv import load_dotenv
@@ -26,105 +26,108 @@ def get_db_connection():
     
     Returns:
         sqlite3.Connection: Database connection object.
-    """
-    conn = sqlite3.connect('weather.db')
-    conn.row_factory = sqlite3.Row  # Access rows as dictionaries
-    return conn
-
-@app.route('/')
-def index():
-    """
-    Route to render homepage.
-
-    Returns:
-        Rendered HTML homepage.
-    """
-    return render_template('index.html')
-
-@app.route('/weather', methods=['POST'])
-def get_weather():
-    """
-    Route to fetch weather data for a specified city
-
-    Returns:
-        Rendered HTML page with weather data or error message.
 
     Raises:
-        500 error if there is an issue fetching current weather.
+        sqlite3.DatabaseError: If there is an issue with the database connection.
     """
-    city = request.form['city']
-    api_key = os.getenv('OPENWEATHER_API_KEY')
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=imperial"
-
     try:
-        app.logger.info(f"Fetching weather data for city: {city}")
-        
-        # Make the API request
-        response = requests.get(url)
-        data = response.json()
+        conn = sqlite3.connect('weather.db')
+        return conn
+    except sqlite3.Error as e:
+        logging.error(f"Database connection error: {e}")
+        raise
 
-        if response.status_code == 200:
-            app.logger.info(f"Weather data retrieved for city: {city}")
-
-            # Extract relevant data from the API response
-            temperature = data['main']['temp']
-            feels_like = data['main']['feels_like']
-            humidity = data['main']['humidity']
-            wind_speed = data['wind']['speed']
-            wind_deg = data['wind']['deg']
-            wind_direction = convert_wind_deg_to_direction(wind_deg)
-            app.logger.info(f"Inserting weather data for {city}: Temp={temperature}, Feels like={feels_like}, Wind Speed={wind_speed}, Direction={wind_direction}")
-
-            # Save the weather data into the database
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("INSERT INTO weather_log (city, temperature, feels_like, humidity, wind_speed, wind_direction) VALUES (?, ?, ?, ?, ?, ?)",
-                           (city, temperature, feels_like, humidity, wind_speed, wind_direction))
-            conn.commit()
-            conn.close()
-            app.logger.info(f"Weather data for {city} saved successfully")
-
-            # Return the weather data to the HTML page for rendering
-            return render_template('weather.html', weather=data, feels_like=feels_like, humidity=humidity, wind_speed=wind_speed, wind_direction=wind_direction)
-        
-        else:
-            # Handle API error (e.g., invalid city)
-            app.logger.warning(f"City not found: {city}")
-            error_message = "The city you entered was not found. Please try again."
-            return render_template('weather.html', weather=None, error_message=error_message)
-    except Exception as e:
-        # Handle general API request errors
-        app.logger.error(f"Error fetching weather data: {str(e)}")
-        return make_response(jsonify({'error': 'Error fetching weather data'}), 500)
-    
-@app.route('/logs')
-def logs():
+# Route to add a favorite location
+@app.route('/api/add-favorite', methods=['POST'])
+def add_favorite():
     """
-    Route to display weather logs from the database.
+    POST: Adds a user's favorite location to the database.
+
+    Expected JSON Input:
+        - user_id (str): The ID of the user adding the favorite location.
+        - location (str): The name of the location to be saved as a favorite.
 
     Returns:
-        Rendered HTML page with the weather logs.
+        Response: JSON response with status and message.
 
     Raises:
-        500 error if there is an issue fetching logs.
+        400 error if missing input.
+        500 error if there is an issue adding the favorite to the database.
     """
     try:
-        app.logger.info("Fetching weather logs")
+        data = request.get_json()
+        user_id = data.get('user_id')
+        location = data.get('location')
 
-        # Retrieve weather logs from the database
+        # Validate input
+        if not user_id or not location:
+            logging.warning("user_id or location missing in request.")
+            return make_response(jsonify({'error': 'user_id and location are required'}), 400)
+
         conn = get_db_connection()
-        logs = conn.execute('SELECT * FROM weather_log ORDER BY timestamp DESC').fetchall()
+        cursor = conn.cursor()
+
+        # Insert the favorite location into the favorites table
+        cursor.execute('''
+            INSERT INTO favorites (user_id, location)
+            VALUES (?, ?)
+        ''', (user_id, location))
+
+        conn.commit()
         conn.close()
 
-        app.logger.info("Successfully fetched weather logs")
-
-        # Render logs in the template
-        return render_template('logs.html', logs=logs)
+        logging.info(f"Favorite location '{location}' added for user {user_id}.")
+        return make_response(jsonify({'status': 'success', 'message': 'Favorite location added'}), 201)
 
     except Exception as e:
-        # Handle general database or query errors
-        app.logger.error(f"Error fetching weather logs: {str(e)}")
-        return make_response(jsonify({'error': 'Error fetching weather logs'}), 500)# Shows logs ordered by most recent entries
+        logging.error(f"Error adding favorite: {e}")
+        return make_response(jsonify({'error': str(e)}), 500)
+
+# Route to get all favorites for a user
+@app.route('/api/get-favorites', methods=['GET'])
+def get_favorites():
+    """
+    GET: Retrieves all favorite locations for a given user.
+
+    Query Parameter:
+        - user_id (str): The ID of the user whose favorites are being request
+
+    Returns:
+        Response: JSON response with a list of favorite locations.
+    
+    Raises:
+        400 error if missing input.
+        500 error if there is an issue fetching favorites
+    """
+    try:
+        user_id = request.args.get('user_id')
+
+        # Validate input
+        if not user_id:
+            logging.warning("user_id missing in request.")
+            return make_response(jsonify({'error': 'user_id is required'}), 400)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Query to get all favorites for the user
+        cursor.execute('SELECT id, location FROM favorites WHERE user_id = ?', (user_id,))
+        favorites = cursor.fetchall()
+
+        conn.close()
+
+        if not favorites:
+            return make_response(jsonify({'message': 'No favorites found'}), 404)
+
+        # Prepare the response data
+        favorite_locations = [{'id': fav[0], 'location': fav[1]} for fav in favorites]
+
+        logging.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
+        return make_response(jsonify({'favorites': favorite_locations}), 200)
+
+    except Exception as e:
+        logging.error(f"Error fetching favorites: {e}")
+        return make_response(jsonify({'error': str(e)}), 500)
 
 if __name__ == '__main__':
     app.run(debug=True)
