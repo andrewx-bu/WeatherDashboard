@@ -131,10 +131,10 @@ def add_favorite():
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to remove a favorite location for a user
-@app.route('/api/remove-favorite', methods=['POST'])
+@app.route('/api/remove-favorite', methods=['DELETE'])
 def remove_favorite():
     """
-    POST: Removes a user's favorite location from the database.
+    DELETE: Removes a user's favorite location from the database.
 
     Expected JSON Input:
         - user_id (str): The ID of the user removing the favorite location.
@@ -182,10 +182,10 @@ def remove_favorite():
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to update a favorite for a user
-@app.route('/api/update-favorite', methods=['POST'])
+@app.route('/api/update-favorite', methods=['PUT'])
 def update_favorite():
     """
-    POST: Updates a user's favorite location in the database.
+    PUT: Updates a user's favorite location in the database.
 
     Expected JSON Input:
         - user_id (str): The ID of the user updating the favorite location.
@@ -196,7 +196,8 @@ def update_favorite():
         Response: JSON response with status and message.
 
     Raises:
-        400 error if any of 'user_id', 'old_location', or 'new_location' are missing in the request.
+        400 error if missing input.
+        404 error if the old location does not exist for the user.
         500 error if there is an issue updating the favorite location in the database.
     """
     try:
@@ -213,7 +214,17 @@ def update_favorite():
         cursor = conn.cursor()
 
         # Update the favorite location
-        cursor.execute('''UPDATE favorites SET location = ? WHERE user_id = ? AND location = ?''', (new_location, user_id, old_location))
+        cursor.execute(
+            '''UPDATE favorites SET location = ? WHERE user_id = ? AND location = ?''', 
+            (new_location, user_id, old_location)
+        )
+
+        if cursor.rowcount == 0:
+            # No rows updated, meaning old_location does not exist
+            conn.close()
+            logging.warning(f"Favorite location '{old_location}' not found for user {user_id}.")
+            return make_response(jsonify({'error': f"'{old_location}' is not a favorite location for this user."}), 404)
+        
         conn.commit()
         conn.close()
 
@@ -225,7 +236,7 @@ def update_favorite():
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to clear all favorites for a user
-@app.route('/api/clear-favorites', methods=['POST'])
+@app.route('/api/clear-favorites', methods=['DELETE'])
 def clear_favorites():
     """
     POST: Removes all favorite locations from from the database.
