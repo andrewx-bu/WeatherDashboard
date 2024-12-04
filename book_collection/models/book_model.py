@@ -17,7 +17,7 @@ configure_logger(logger)
 @dataclass
 class Book:
     id: int
-    artist: str
+    author: str
     title: str
     year: int
     genre: str
@@ -73,19 +73,19 @@ def weather() -> None: # just prints current weather description of Boston
         print('Error:', e)
         return None
 
-def create_book(artist: str, title: str, year: int, genre: str) -> None:
+def create_book(author: str, title: str, year: int, genre: str) -> None:
     """
     Creates a new book in the books table.
 
     Args:
-        artist (str): The artist's name.
+        author (str): The author's name.
         title (str): The book title.
         year (int): The year the book was released.
         genre (str): The book genre.
 
     Raises:
         ValueError: If year is invalid.
-        sqlite3.IntegrityError: If a book with the same compound key (artist, title, year) already exists.
+        sqlite3.IntegrityError: If a book with the same compound key (author, title, year) already exists.
         sqlite3.Error: For any other database errors.
     """
     # Validate the required fields
@@ -97,16 +97,16 @@ def create_book(artist: str, title: str, year: int, genre: str) -> None:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO books (artist, title, year, genre)
+                INSERT INTO books (author, title, year, genre)
                 VALUES (?, ?, ?, ?)
-            """, (artist, title, year, genre))
+            """, (author, title, year, genre))
             conn.commit()
 
-            logger.info("Book created successfully: %s - %s (%d)", artist, title, year)
+            logger.info("Book created successfully: %s - %s (%d)", author, title, year)
 
     except sqlite3.IntegrityError as e:
-        logger.error("Book with artist '%s', title '%s', and year %d already exists.", artist, title, year)
-        raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} already exists.") from e
+        logger.error("Book with author '%s', title '%s', and year %d already exists.", author, title, year)
+        raise ValueError(f"Book with author '{author}', title '{title}', and year {year} already exists.") from e
     except sqlite3.Error as e:
         logger.error("Database error while creating book: %s", str(e))
         raise sqlite3.Error(f"Database error: {str(e)}")
@@ -186,7 +186,7 @@ def get_book_by_id(book_id: int) -> Book:
             cursor = conn.cursor()
             logger.info("Attempting to retrieve book with ID %s", book_id)
             cursor.execute("""
-                SELECT id, artist, title, year, genre, deleted
+                SELECT id, author, title, year, genre, deleted
                 FROM books
                 WHERE id = ?
             """, (book_id,))
@@ -197,7 +197,7 @@ def get_book_by_id(book_id: int) -> Book:
                     logger.info("Book with ID %s has been deleted", book_id)
                     raise ValueError(f"Book with ID {book_id} has been deleted")
                 logger.info("Book with ID %s found", book_id)
-                return Book(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4])
+                return Book(id=row[0], author=row[1], title=row[2], year=row[3], genre=row[4])
             else:
                 logger.info("Book with ID %s not found", book_id)
                 raise ValueError(f"Book with ID {book_id} not found")
@@ -206,12 +206,12 @@ def get_book_by_id(book_id: int) -> Book:
         logger.error("Database error while retrieving book by ID %s: %s", book_id, str(e))
         raise e
 
-def get_book_by_compound_key(artist: str, title: str, year: int) -> Book:
+def get_book_by_compound_key(author: str, title: str, year: int) -> Book:
     """
-    Retrieves a book from the catalog by its compound key (artist, title, year).
+    Retrieves a book from the catalog by its compound key (author, title, year).
 
     Args:
-        artist (str): The artist of the book.
+        author (str): The author of the book.
         title (str): The title of the book.
         year (int): The year of the book.
 
@@ -224,26 +224,26 @@ def get_book_by_compound_key(artist: str, title: str, year: int) -> Book:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            logger.info("Attempting to retrieve book with artist '%s', title '%s', and year %d", artist, title, year)
+            logger.info("Attempting to retrieve book with author '%s', title '%s', and year %d", author, title, year)
             cursor.execute("""
-                SELECT id, artist, title, year, genre, deleted
+                SELECT id, author, title, year, genre, deleted
                 FROM books
-                WHERE artist = ? AND title = ? AND year = ?
-            """, (artist, title, year))
+                WHERE author = ? AND title = ? AND year = ?
+            """, (author, title, year))
             row = cursor.fetchone()
 
             if row:
                 if row[5]:  # deleted flag
-                    logger.info("Book with artist '%s', title '%s', and year %d has been deleted", artist, title, year)
-                    raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} has been deleted")
-                logger.info("Book with artist '%s', title '%s', and year %d found", artist, title, year)
-                return Book(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4])
+                    logger.info("Book with author '%s', title '%s', and year %d has been deleted", author, title, year)
+                    raise ValueError(f"Book with author '{author}', title '{title}', and year {year} has been deleted")
+                logger.info("Book with author '%s', title '%s', and year %d found", author, title, year)
+                return Book(id=row[0], author=row[1], title=row[2], year=row[3], genre=row[4])
             else:
-                logger.info("Book with artist '%s', title '%s', and year %d not found", artist, title, year)
-                raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} not found")
+                logger.info("Book with author '%s', title '%s', and year %d not found", author, title, year)
+                raise ValueError(f"Book with author '{author}', title '{title}', and year {year} not found")
 
     except sqlite3.Error as e:
-        logger.error("Database error while retrieving book by compound key (artist '%s', title '%s', year %d): %s", artist, title, year, str(e))
+        logger.error("Database error while retrieving book by compound key (author '%s', title '%s', year %d): %s", author, title, year, str(e))
         raise e
 
 def get_all_books(sort_by_author: bool = False) -> list[dict]:
@@ -266,7 +266,7 @@ def get_all_books(sort_by_author: bool = False) -> list[dict]:
 
             # Determine the sort order based on the 'sort_by_author' flag
             query = """
-                SELECT id, artist, title, year, genre
+                SELECT id, author, title, year, genre
                 FROM books
                 WHERE deleted = FALSE
             """
@@ -283,7 +283,7 @@ def get_all_books(sort_by_author: bool = False) -> list[dict]:
             books = [
                 {
                     "id": row[0],
-                    "artist": row[1],
+                    "author": row[1],
                     "title": row[2],
                     "year": row[3],
                     "genre": row[4],
@@ -322,7 +322,7 @@ def get_random_book() -> Book:
         book_data = all_books[random_index - 1]
         return Book(
             id=book_data["id"],
-            artist=book_data["artist"],
+            author=book_data["author"],
             title=book_data["title"],
             year=book_data["year"],
             genre=book_data["genre"]
