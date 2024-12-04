@@ -5,9 +5,9 @@ import sqlite3
 import requests # for API call
 from dotenv import load_dotenv # for accessing hidden variables in .env file
 
-from music_collection.utils.logger import configure_logger
-from music_collection.utils.random_utils import get_random
-from music_collection.utils.sql_utils import get_db_connection
+from book_collection.utils.logger import configure_logger
+from book_collection.utils.random_utils import get_random
+from book_collection.utils.sql_utils import get_db_connection
 
 
 logger = logging.getLogger(__name__)
@@ -15,17 +15,14 @@ configure_logger(logger)
 
 
 @dataclass
-class Song:
+class Book:
     id: int
     artist: str
     title: str
     year: int
     genre: str
-    duration: int  # in seconds
 
     def __post_init__(self):
-        if self.duration <= 0:
-            raise ValueError(f"Duration must be greater than 0, got {self.duration}")
         if self.year <= 1900:
             raise ValueError(f"Year must be greater than 1900, got {self.year}")
 
@@ -76,56 +73,53 @@ def weather() -> None: # just prints current weather description of Boston
         print('Error:', e)
         return None
 
-def create_song(artist: str, title: str, year: int, genre: str, duration: int) -> None:
+def create_book(artist: str, title: str, year: int, genre: str) -> None:
     """
-    Creates a new song in the songs table.
+    Creates a new book in the books table.
 
     Args:
         artist (str): The artist's name.
-        title (str): The song title.
-        year (int): The year the song was released.
-        genre (str): The song genre.
-        duration (int): The duration of the song in seconds.
+        title (str): The book title.
+        year (int): The year the book was released.
+        genre (str): The book genre.
 
     Raises:
-        ValueError: If year or duration are invalid.
-        sqlite3.IntegrityError: If a song with the same compound key (artist, title, year) already exists.
+        ValueError: If year is invalid.
+        sqlite3.IntegrityError: If a book with the same compound key (artist, title, year) already exists.
         sqlite3.Error: For any other database errors.
     """
     # Validate the required fields
     if not isinstance(year, int) or year < 1900:
         raise ValueError(f"Invalid year provided: {year} (must be an integer greater than or equal to 1900).")
-    if not isinstance(duration, int) or duration <= 0:
-        raise ValueError(f"Invalid song duration: {duration} (must be a positive integer).")
-
+    
     try:
         # Use the context manager to handle the database connection
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO songs (artist, title, year, genre, duration)
-                VALUES (?, ?, ?, ?, ?)
-            """, (artist, title, year, genre, duration))
+                INSERT INTO books (artist, title, year, genre)
+                VALUES (?, ?, ?, ?)
+            """, (artist, title, year, genre))
             conn.commit()
 
-            logger.info("Song created successfully: %s - %s (%d)", artist, title, year)
+            logger.info("Book created successfully: %s - %s (%d)", artist, title, year)
 
     except sqlite3.IntegrityError as e:
-        logger.error("Song with artist '%s', title '%s', and year %d already exists.", artist, title, year)
-        raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} already exists.") from e
+        logger.error("Book with artist '%s', title '%s', and year %d already exists.", artist, title, year)
+        raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} already exists.") from e
     except sqlite3.Error as e:
-        logger.error("Database error while creating song: %s", str(e))
+        logger.error("Database error while creating book: %s", str(e))
         raise sqlite3.Error(f"Database error: {str(e)}")
 
 def clear_catalog() -> None:
     """
-    Recreates the songs table, effectively deleting all songs.
+    Recreates the books table, effectively deleting all books.
 
     Raises:
         sqlite3.Error: If any database error occurs.
     """
     try:
-        with open(os.getenv("SQL_CREATE_TABLE_PATH", "/app/sql/create_song_table.sql"), "r") as fh:
+        with open(os.getenv("SQL_CREATE_TABLE_PATH", "/app/sql/create_book_table.sql"), "r") as fh:
             create_table_script = fh.read()
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -138,129 +132,129 @@ def clear_catalog() -> None:
         logger.error("Database error while clearing catalog: %s", str(e))
         raise e
 
-def delete_song(song_id: int) -> None:
+def delete_book(book_id: int) -> None:
     """
-    Soft deletes a song from the catalog by marking it as deleted.
+    Soft deletes a book from the catalog by marking it as deleted.
 
     Args:
-        song_id (int): The ID of the song to delete.
+        book_id (int): The ID of the book to delete.
 
     Raises:
-        ValueError: If the song with the given ID does not exist or is already marked as deleted.
+        ValueError: If the book with the given ID does not exist or is already marked as deleted.
         sqlite3.Error: If any database error occurs.
     """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
-            # Check if the song exists and if it's already deleted
-            cursor.execute("SELECT deleted FROM songs WHERE id = ?", (song_id,))
+            # Check if the book exists and if it's already deleted
+            cursor.execute("SELECT deleted FROM books WHERE id = ?", (book_id,))
             try:
                 deleted = cursor.fetchone()[0]
                 if deleted:
-                    logger.info("Song with ID %s has already been deleted", song_id)
-                    raise ValueError(f"Song with ID {song_id} has already been deleted")
+                    logger.info("Book with ID %s has already been deleted", book_id)
+                    raise ValueError(f"Book with ID {book_id} has already been deleted")
             except TypeError:
-                logger.info("Song with ID %s not found", song_id)
-                raise ValueError(f"Song with ID {song_id} not found")
+                logger.info("Book with ID %s not found", book_id)
+                raise ValueError(f"Book with ID {book_id} not found")
 
             # Perform the soft delete by setting 'deleted' to TRUE
-            cursor.execute("UPDATE songs SET deleted = TRUE WHERE id = ?", (song_id,))
+            cursor.execute("UPDATE books SET deleted = TRUE WHERE id = ?", (book_id,))
             conn.commit()
 
-            logger.info("Song with ID %s marked as deleted.", song_id)
+            logger.info("Book with ID %s marked as deleted.", book_id)
 
     except sqlite3.Error as e:
-        logger.error("Database error while deleting song: %s", str(e))
+        logger.error("Database error while deleting book: %s", str(e))
         raise e
 
-def get_song_by_id(song_id: int) -> Song:
+def get_book_by_id(book_id: int) -> Book:
     """
-    Retrieves a song from the catalog by its song ID.
+    Retrieves a book from the catalog by its book ID.
 
     Args:
-        song_id (int): The ID of the song to retrieve.
+        book_id (int): The ID of the book to retrieve.
 
     Returns:
-        Song: The Song object corresponding to the song_id.
+        Book: The Book object corresponding to the book_id.
 
     Raises:
-        ValueError: If the song is not found or is marked as deleted.
+        ValueError: If the book is not found or is marked as deleted.
     """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            logger.info("Attempting to retrieve song with ID %s", song_id)
+            logger.info("Attempting to retrieve book with ID %s", book_id)
             cursor.execute("""
-                SELECT id, artist, title, year, genre, duration, deleted
-                FROM songs
+                SELECT id, artist, title, year, genre, deleted
+                FROM books
                 WHERE id = ?
-            """, (song_id,))
+            """, (book_id,))
             row = cursor.fetchone()
 
             if row:
-                if row[6]:  # deleted flag
-                    logger.info("Song with ID %s has been deleted", song_id)
-                    raise ValueError(f"Song with ID {song_id} has been deleted")
-                logger.info("Song with ID %s found", song_id)
-                return Song(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4], duration=row[5])
+                if row[5]:  # deleted flag
+                    logger.info("Book with ID %s has been deleted", book_id)
+                    raise ValueError(f"Book with ID {book_id} has been deleted")
+                logger.info("Book with ID %s found", book_id)
+                return Book(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4])
             else:
-                logger.info("Song with ID %s not found", song_id)
-                raise ValueError(f"Song with ID {song_id} not found")
+                logger.info("Book with ID %s not found", book_id)
+                raise ValueError(f"Book with ID {book_id} not found")
 
     except sqlite3.Error as e:
-        logger.error("Database error while retrieving song by ID %s: %s", song_id, str(e))
+        logger.error("Database error while retrieving book by ID %s: %s", book_id, str(e))
         raise e
 
-def get_song_by_compound_key(artist: str, title: str, year: int) -> Song:
+def get_book_by_compound_key(artist: str, title: str, year: int) -> Book:
     """
-    Retrieves a song from the catalog by its compound key (artist, title, year).
+    Retrieves a book from the catalog by its compound key (artist, title, year).
 
     Args:
-        artist (str): The artist of the song.
-        title (str): The title of the song.
-        year (int): The year of the song.
+        artist (str): The artist of the book.
+        title (str): The title of the book.
+        year (int): The year of the book.
 
     Returns:
-        Song: The Song object corresponding to the compound key.
+        Book: The Book object corresponding to the compound key.
 
     Raises:
-        ValueError: If the song is not found or is marked as deleted.
+        ValueError: If the book is not found or is marked as deleted.
     """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            logger.info("Attempting to retrieve song with artist '%s', title '%s', and year %d", artist, title, year)
+            logger.info("Attempting to retrieve book with artist '%s', title '%s', and year %d", artist, title, year)
             cursor.execute("""
-                SELECT id, artist, title, year, genre, duration, deleted
-                FROM songs
+                SELECT id, artist, title, year, genre, deleted
+                FROM books
                 WHERE artist = ? AND title = ? AND year = ?
             """, (artist, title, year))
             row = cursor.fetchone()
 
             if row:
-                if row[6]:  # deleted flag
-                    logger.info("Song with artist '%s', title '%s', and year %d has been deleted", artist, title, year)
-                    raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} has been deleted")
-                logger.info("Song with artist '%s', title '%s', and year %d found", artist, title, year)
-                return Song(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4], duration=row[5])
+                if row[5]:  # deleted flag
+                    logger.info("Book with artist '%s', title '%s', and year %d has been deleted", artist, title, year)
+                    raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} has been deleted")
+                logger.info("Book with artist '%s', title '%s', and year %d found", artist, title, year)
+                return Book(id=row[0], artist=row[1], title=row[2], year=row[3], genre=row[4])
             else:
-                logger.info("Song with artist '%s', title '%s', and year %d not found", artist, title, year)
-                raise ValueError(f"Song with artist '{artist}', title '{title}', and year {year} not found")
+                logger.info("Book with artist '%s', title '%s', and year %d not found", artist, title, year)
+                raise ValueError(f"Book with artist '{artist}', title '{title}', and year {year} not found")
 
     except sqlite3.Error as e:
-        logger.error("Database error while retrieving song by compound key (artist '%s', title '%s', year %d): %s", artist, title, year, str(e))
+        logger.error("Database error while retrieving book by compound key (artist '%s', title '%s', year %d): %s", artist, title, year, str(e))
         raise e
 
-def get_all_songs(sort_by_play_count: bool = False) -> list[dict]:
+def get_all_books(sort_by_author: bool = False) -> list[dict]:
     """
-    Retrieves all songs that are not marked as deleted from the catalog.
+    Retrieves all books that are not marked as deleted from the catalog.
 
     Args:
-        sort_by_play_count (bool): If True, sort the songs by play count in descending order.
+        sort_by_author (bool): If True, sort the books by play count in descending order.
 
     Returns:
-        list[dict]: A list of dictionaries representing all non-deleted songs with play_count.
+        list[dict]: A list of dictionaries representing all non-deleted books with author.
 
     Logs:
         Warning: If the catalog is empty.
@@ -268,112 +262,72 @@ def get_all_songs(sort_by_play_count: bool = False) -> list[dict]:
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            logger.info("Attempting to retrieve all non-deleted songs from the catalog")
+            logger.info("Attempting to retrieve all non-deleted books from the catalog")
 
-            # Determine the sort order based on the 'sort_by_play_count' flag
+            # Determine the sort order based on the 'sort_by_author' flag
             query = """
-                SELECT id, artist, title, year, genre, duration, play_count
-                FROM songs
+                SELECT id, artist, title, year, genre
+                FROM books
                 WHERE deleted = FALSE
             """
-            if sort_by_play_count:
-                query += " ORDER BY play_count DESC"
+            if sort_by_author:
+                query += " ORDER BY author DESC"
 
             cursor.execute(query)
             rows = cursor.fetchall()
 
             if not rows:
-                logger.warning("The song catalog is empty.")
+                logger.warning("The book catalog is empty.")
                 return []
 
-            songs = [
+            books = [
                 {
                     "id": row[0],
                     "artist": row[1],
                     "title": row[2],
                     "year": row[3],
                     "genre": row[4],
-                    "duration": row[5],
-                    "play_count": row[6],
                 }
                 for row in rows
             ]
-            logger.info("Retrieved %d songs from the catalog", len(songs))
-            return songs
+            logger.info("Retrieved %d books from the catalog", len(books))
+            return books
 
     except sqlite3.Error as e:
-        logger.error("Database error while retrieving all songs: %s", str(e))
+        logger.error("Database error while retrieving all books: %s", str(e))
         raise e
 
-def get_random_song() -> Song:
+def get_random_book() -> Book:
     """
-    Retrieves a random song from the catalog.
+    Retrieves a random book from the catalog.
 
     Returns:
-        Song: A randomly selected Song object.
+        Book: A randomly selected Book object.
 
     Raises:
         ValueError: If the catalog is empty.
     """
     try:
-        all_songs = get_all_songs()
+        all_books = get_all_books()
 
-        if not all_songs:
-            logger.info("Cannot retrieve random song because the song catalog is empty.")
-            raise ValueError("The song catalog is empty.")
+        if not all_books:
+            logger.info("Cannot retrieve random book because the book catalog is empty.")
+            raise ValueError("The book catalog is empty.")
 
         # Get a random index using the random.org API
-        random_index = get_random(len(all_songs))
-        logger.info("Random index selected: %d (total songs: %d)", random_index, len(all_songs))
+        random_index = get_random(len(all_books))
+        logger.info("Random index selected: %d (total books: %d)", random_index, len(all_books))
 
-        # Return the song at the random index, adjust for 0-based indexing
-        song_data = all_songs[random_index - 1]
-        return Song(
-            id=song_data["id"],
-            artist=song_data["artist"],
-            title=song_data["title"],
-            year=song_data["year"],
-            genre=song_data["genre"],
-            duration=song_data["duration"]
+        # Return the book at the random index, adjust for 0-based indexing
+        book_data = all_books[random_index - 1]
+        return Book(
+            id=book_data["id"],
+            artist=book_data["artist"],
+            title=book_data["title"],
+            year=book_data["year"],
+            genre=book_data["genre"]
         )
 
     except Exception as e:
-        logger.error("Error while retrieving random song: %s", str(e))
-        raise e
-
-def update_play_count(song_id: int) -> None:
-    """
-    Increments the play count of a song by song ID.
-
-    Args:
-        song_id (int): The ID of the song whose play count should be incremented.
-
-    Raises:
-        ValueError: If the song does not exist or is marked as deleted.
-        sqlite3.Error: If there is a database error.
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            logger.info("Attempting to update play count for song with ID %d", song_id)
-
-            # Check if the song exists and if it's deleted
-            cursor.execute("SELECT deleted FROM songs WHERE id = ?", (song_id,))
-            try:
-                deleted = cursor.fetchone()[0]
-                if deleted:
-                    logger.info("Song with ID %d has been deleted", song_id)
-                    raise ValueError(f"Song with ID {song_id} has been deleted")
-            except TypeError:
-                logger.info("Song with ID %d not found", song_id)
-                raise ValueError(f"Song with ID {song_id} not found")
-
-            # Increment the play count
-            cursor.execute("UPDATE songs SET play_count = play_count + 1 WHERE id = ?", (song_id,))
-            conn.commit()
-
-            logger.info("Play count incremented for song with ID: %d", song_id)
-
-    except sqlite3.Error as e:
-        logger.error("Database error while updating play count for song with ID %d: %s", song_id, str(e))
+        logger.error("Error while retrieving random book: %s", str(e))
         raise e
