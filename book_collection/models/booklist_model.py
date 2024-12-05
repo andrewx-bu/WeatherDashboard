@@ -13,7 +13,7 @@ class BooklistModel:
 
     Attributes:
         current_track_number (int): The current track number being played.
-        playlist (List[Song]): The list of songs in the playlist.
+        playlist (List[Books]): The list of songs in the playlist.
 
     """
 
@@ -22,25 +22,25 @@ class BooklistModel:
         Initializes the PlaylistModel with an empty playlist and the current track set to 1.
         """
         self.current_track_number = 1
-        self.playlist: List[Song] = []
+        self.playlist: List[Books] = []
 
     ##################################################
     # Song Management Functions
     ##################################################
 
-    def add_song_to_playlist(self, song: Song) -> None:
+    def add_song_to_playlist(self, song: Books) -> None:
         """
         Adds a song to the playlist.
 
         Args:
-            song (Song): the song to add to the playlist.
+            song (Books): the song to add to the playlist.
 
         Raises:
             TypeError: If the song is not a valid Song instance.
             ValueError: If a song with the same 'id' already exists.
         """
         logger.info("Adding new song to playlist")
-        if not isinstance(song, Song):
+        if not isinstance(song, Books):
             logger.error("Song is not a valid song")
             raise TypeError("Song is not a valid song")
 
@@ -97,7 +97,7 @@ class BooklistModel:
     # Playlist Retrieval Functions
     ##################################################
 
-    def get_all_songs(self) -> List[Song]:
+    def get_all_songs(self) -> List[Books]:
         """
         Returns a list of all songs in the playlist.
         """
@@ -105,7 +105,7 @@ class BooklistModel:
         logger.info("Getting all songs in the playlist")
         return self.playlist
 
-    def get_song_by_song_id(self, song_id: int) -> Song:
+    def get_song_by_song_id(self, song_id: int) -> Books:
         """
         Retrieves a song from the playlist by its song ID.
 
@@ -120,9 +120,9 @@ class BooklistModel:
         logger.info("Getting song with id %d from playlist", song_id)
         return next((song for song in self.playlist if song.id == song_id), None)
 
-    def get_song_by_track_number(self, track_number: int) -> Song:
+    def get_song_by_track_number(self, track_number: int) -> Books:
         """
-        Retrieves a song from the playlist by its track number (1-indexed).
+        Retrieves a book from the playlist by its track number (1-indexed).
 
         Args:
             track_number (int): The track number of the song to retrieve.
@@ -136,7 +136,7 @@ class BooklistModel:
         logger.info("Getting song at track number %d from playlist", track_number)
         return self.playlist[playlist_index]
 
-    def get_current_song(self) -> Song:
+    def get_current_song(self) -> Books:
         """
         Returns the current song being played.
         """
