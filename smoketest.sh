@@ -59,15 +59,15 @@ clear_catalog() {
 }
 
 create_song() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
   genre=$4
   duration=$5
 
-  echo "Adding song ($artist - $title, $year) to the playlist..."
+  echo "Adding song ($author - $title, $year) to the playlist..."
   curl -s -X POST "$BASE_URL/create-song" -H "Content-Type: application/json" \
-    -d "{\"artist\":\"$artist\", \"title\":\"$title\", \"year\":$year, \"genre\":\"$genre\", \"duration\":$duration}" | grep -q '"status": "success"'
+    -d "{\"author\":\"$author\", \"title\":\"$title\", \"year\":$year, \"genre\":\"$genre\", \"duration\":$duration}" | grep -q '"status": "success"'
 
   if [ $? -eq 0 ]; then
     echo "Song added successfully."
@@ -123,12 +123,12 @@ get_song_by_id() {
 }
 
 get_song_by_compound_key() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
 
-  echo "Getting song by compound key (Artist: '$artist', Title: '$title', Year: $year)..."
-  response=$(curl -s -X GET "$BASE_URL/get-song-from-catalog-by-compound-key?artist=$(echo $artist | sed 's/ /%20/g')&title=$(echo $title | sed 's/ /%20/g')&year=$year")
+  echo "Getting song by compound key (Author: '$author', Title: '$title', Year: $year)..."
+  response=$(curl -s -X GET "$BASE_URL/get-song-from-catalog-by-compound-key?author=$(echo $author | sed 's/ /%20/g')&title=$(echo $title | sed 's/ /%20/g')&year=$year")
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song retrieved successfully by compound key."
     if [ "$ECHO_JSON" = true ]; then
@@ -164,14 +164,14 @@ get_random_song() {
 ############################################################
 
 add_song_to_playlist() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
 
-  echo "Adding song to playlist: $artist - $title ($year)..."
+  echo "Adding song to playlist: $author - $title ($year)..."
   response=$(curl -s -X POST "$BASE_URL/add-song-to-playlist" \
     -H "Content-Type: application/json" \
-    -d "{\"artist\":\"$artist\", \"title\":\"$title\", \"year\":$year}")
+    -d "{\"author\":\"$author\", \"title\":\"$title\", \"year\":$year}")
 
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song added to playlist successfully."
@@ -186,14 +186,14 @@ add_song_to_playlist() {
 }
 
 remove_song_from_playlist() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
 
-  echo "Removing song from playlist: $artist - $title ($year)..."
+  echo "Removing song from playlist: $author - $title ($year)..."
   response=$(curl -s -X DELETE "$BASE_URL/remove-song-from-playlist" \
     -H "Content-Type: application/json" \
-    -d "{\"artist\":\"$artist\", \"title\":\"$title\", \"year\":$year}")
+    -d "{\"author\":\"$author\", \"title\":\"$title\", \"year\":$year}")
 
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song removed from playlist successfully."
@@ -372,14 +372,14 @@ play_rest_of_playlist() {
 ############################################################
 
 move_song_to_beginning() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
 
-  echo "Moving song ($artist - $title, $year) to the beginning of the playlist..."
+  echo "Moving song ($author - $title, $year) to the beginning of the playlist..."
   response=$(curl -s -X POST "$BASE_URL/move-song-to-beginning" \
     -H "Content-Type: application/json" \
-    -d "{\"artist\": \"$artist\", \"title\": \"$title\", \"year\": $year}")
+    -d "{\"author\": \"$author\", \"title\": \"$title\", \"year\": $year}")
 
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song moved to the beginning successfully."
@@ -390,14 +390,14 @@ move_song_to_beginning() {
 }
 
 move_song_to_end() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
 
-  echo "Moving song ($artist - $title, $year) to the end of the playlist..."
+  echo "Moving song ($author - $title, $year) to the end of the playlist..."
   response=$(curl -s -X POST "$BASE_URL/move-song-to-end" \
     -H "Content-Type: application/json" \
-    -d "{\"artist\": \"$artist\", \"title\": \"$title\", \"year\": $year}")
+    -d "{\"author\": \"$author\", \"title\": \"$title\", \"year\": $year}")
 
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song moved to the end successfully."
@@ -408,15 +408,15 @@ move_song_to_end() {
 }
 
 move_song_to_track_number() {
-  artist=$1
+  author=$1
   title=$2
   year=$3
   track_number=$4
 
-  echo "Moving song ($artist - $title, $year) to track number ($track_number)..."
+  echo "Moving song ($author - $title, $year) to track number ($track_number)..."
   response=$(curl -s -X POST "$BASE_URL/move-song-to-track-number" \
     -H "Content-Type: application/json" \
-    -d "{\"artist\": \"$artist\", \"title\": \"$title\", \"year\": $year, \"track_number\": $track_number}")
+    -d "{\"author\": \"$author\", \"title\": \"$title\", \"year\": $year, \"track_number\": $track_number}")
 
   if echo "$response" | grep -q '"status": "success"'; then
     echo "Song moved to track number ($track_number) successfully."
