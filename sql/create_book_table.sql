@@ -10,3 +10,13 @@ CREATE TABLE books (
     deleted BOOLEAN DEFAULT FALSE,
     UNIQUE(artist, title, year)
 );
+
+-- salted passwords
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    salt BLOB NOT NULL,
+    deleted BOOLEAN DEFAULT FALSE
+);
