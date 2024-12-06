@@ -69,7 +69,7 @@ class BooklistModel:
 
     def remove_book_by_track_number(self, track_number: int) -> None:
         """
-        Removes a book from the bookist by its track number (1-indexed).
+        Removes a book from the booklist by its track number (1-indexed).
 
         Args:
             track_number (int): The track number of the book to remove.
@@ -102,7 +102,7 @@ class BooklistModel:
         Returns a list of all books in the booklist.
         """
         self.check_if_empty()
-        logger.info("Getting all books in the bookist")
+        logger.info("Getting all books in the booklist")
         return self.booklist
 
     def get_book_by_book_id(self, book_id: int) -> Books:
@@ -156,7 +156,7 @@ class BooklistModel:
         return sum(book.duration for book in self.booklist)
 
     ##################################################
-    # Bookist Movement Functions
+    # Booklist Movement Functions
     ##################################################
 
     def go_to_track_number(self, track_number: int) -> None:
