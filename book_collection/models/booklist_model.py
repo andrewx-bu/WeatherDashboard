@@ -1,6 +1,6 @@
 import logging
 from typing import List
-from book_collection.models.book_model import Book, update_play_count
+from book_collection.models.book_model import Book, update_book_count
 from book_collection.utils.logger import configure_logger
 
 logger = logging.getLogger(__name__)
@@ -13,150 +13,150 @@ class BooklistModel:
 
     Attributes:
         current_track_number (int): The current track number being played.
-        playlist (List[Books]): The list of songs in the playlist.
+        booklist (List[Books]): The list of books in the booklist.
 
     """
 
     def __init__(self):
         """
-        Initializes the PlaylistModel with an empty playlist and the current track set to 1.
+        Initializes the BooklistModel with an empty booklist and the current track set to 1.
         """
         self.current_track_number = 1
-        self.playlist: List[Books] = []
+        self.booklist: List[Books] = []
 
     ##################################################
-    # Song Management Functions
+    # Book Management Functions
     ##################################################
 
-    def add_song_to_playlist(self, song: Books) -> None:
+    def add_book_to_booklist(self, book: Books) -> None:
         """
-        Adds a song to the playlist.
+        Adds a book to the booklist.
 
         Args:
-            song (Books): the song to add to the playlist.
+            book (Books): the book to add to the booklist.
 
         Raises:
-            TypeError: If the song is not a valid Song instance.
-            ValueError: If a song with the same 'id' already exists.
+            TypeError: If the book is not a valid Book instance.
+            ValueError: If a book with the same 'id' already exists.
         """
-        logger.info("Adding new song to playlist")
-        if not isinstance(song, Books):
-            logger.error("Song is not a valid song")
-            raise TypeError("Song is not a valid song")
+        logger.info("Adding new book to booklist")
+        if not isinstance(book, Books):
+            logger.error("Book is not a valid book")
+            raise TypeError("Book is not a valid book")
 
-        song_id = self.validate_song_id(song.id, check_in_playlist=False)
-        if song_id in [song_in_playlist.id for song_in_playlist in self.playlist]:
-            logger.error("Song with ID %d already exists in the playlist", song.id)
-            raise ValueError(f"Song with ID {song.id} already exists in the playlist")
+        book_id = self.validate_book_id(book.id, check_in_booklist=False)
+        if book_id in [book_in_booklist.id for book_in_booklist in self.booklist]:
+            logger.error("Book with ID %d already exists in the booklist", book.id)
+            raise ValueError(f"Book with ID {book.id} already exists in the booklist")
 
-        self.playlist.append(song)
+        self.booklist.append(book)
 
-    def remove_song_by_song_id(self, song_id: int) -> None:
+    def remove_book_by_book_id(self, book_id: int) -> None:
         """
-        Removes a song from the playlist by its song ID.
+        Removes a book from the booklist by its book ID.
 
         Args:
-            song_id (int): The ID of the song to remove from the playlist.
+            book_id (int): The ID of the book to remove from the booklist.
 
         Raises:
-            ValueError: If the playlist is empty or the song ID is invalid.
+            ValueError: If the booklist is empty or the book ID is invalid.
         """
-        logger.info("Removing song with id %d from playlist", song_id)
+        logger.info("Removing book with id %d from booklist", book_id)
         self.check_if_empty()
-        song_id = self.validate_song_id(song_id)
-        self.playlist = [song_in_playlist for song_in_playlist in self.playlist if song_in_playlist.id != song_id]
-        logger.info("Song with id %d has been removed", song_id)
+        book_id = self.validate_book_id(book_id)
+        self.booklist = [book_in_booklist for book_in_booklist in self.booklist if book_in_booklist.id != book_id]
+        logger.info("Book with id %d has been removed", book_id)
 
-    def remove_song_by_track_number(self, track_number: int) -> None:
+    def remove_book_by_track_number(self, track_number: int) -> None:
         """
-        Removes a song from the playlist by its track number (1-indexed).
+        Removes a book from the bookist by its track number (1-indexed).
 
         Args:
-            track_number (int): The track number of the song to remove.
+            track_number (int): The track number of the book to remove.
 
         Raises:
-            ValueError: If the playlist is empty or the track number is invalid.
+            ValueError: If the booklist is empty or the track number is invalid.
         """
-        logger.info("Removing song at track number %d from playlist", track_number)
+        logger.info("Removing book at track number %d from booklist", track_number)
         self.check_if_empty()
         track_number = self.validate_track_number(track_number)
-        playlist_index = track_number - 1
-        logger.info("Removing song: %s", self.playlist[playlist_index].title)
-        del self.playlist[playlist_index]
+        booklist_index = track_number - 1
+        logger.info("Removing book: %s", self.booklist[booklist_index].title)
+        del self.booklist[booklist_index]
 
-    def clear_playlist(self) -> None:
+    def clear_booklist(self) -> None:
         """
-        Clears all songs from the playlist. If the playlist is already empty, logs a warning.
+        Clears all books from the booklist. If the booklist is already empty, logs a warning.
         """
-        logger.info("Clearing playlist")
-        if self.get_playlist_length() == 0:
-            logger.warning("Clearing an empty playlist")
-        self.playlist.clear()
+        logger.info("Clearing booklist")
+        if self.get_booklist_length() == 0:
+            logger.warning("Clearing an empty booklist")
+        self.booklist.clear()
 
     ##################################################
-    # Playlist Retrieval Functions
+    # Booklist Retrieval Functions
     ##################################################
 
-    def get_all_songs(self) -> List[Books]:
+    def get_all_books(self) -> List[Books]:
         """
-        Returns a list of all songs in the playlist.
-        """
-        self.check_if_empty()
-        logger.info("Getting all songs in the playlist")
-        return self.playlist
-
-    def get_song_by_song_id(self, song_id: int) -> Books:
-        """
-        Retrieves a song from the playlist by its song ID.
-
-        Args:
-            song_id (int): The ID of the song to retrieve.
-
-        Raises:
-            ValueError: If the playlist is empty or the song is not found.
+        Returns a list of all books in the booklist.
         """
         self.check_if_empty()
-        song_id = self.validate_song_id(song_id)
-        logger.info("Getting song with id %d from playlist", song_id)
-        return next((song for song in self.playlist if song.id == song_id), None)
+        logger.info("Getting all books in the bookist")
+        return self.booklist
 
-    def get_song_by_track_number(self, track_number: int) -> Books:
+    def get_book_by_book_id(self, book_id: int) -> Books:
         """
-        Retrieves a book from the playlist by its track number (1-indexed).
+        Retrieves a book from the booklist by its book ID.
 
         Args:
-            track_number (int): The track number of the song to retrieve.
+            book_id (int): The ID of the book to retrieve.
 
         Raises:
-            ValueError: If the playlist is empty or the track number is invalid.
+            ValueError: If the booklist is empty or the book is not found.
+        """
+        self.check_if_empty()
+        book_id = self.validate_book_id(book_id)
+        logger.info("Getting book with id %d from booklist", book_id)
+        return next((book for book in self.booklist if book.id == book_id), None)
+
+    def get_book_by_track_number(self, track_number: int) -> Books:
+        """
+        Retrieves a book from the booklist by its track number (1-indexed).
+
+        Args:
+            track_number (int): The track number of the book to retrieve.
+
+        Raises:
+            ValueError: If the booklist is empty or the track number is invalid.
         """
         self.check_if_empty()
         track_number = self.validate_track_number(track_number)
-        playlist_index = track_number - 1
-        logger.info("Getting song at track number %d from playlist", track_number)
-        return self.playlist[playlist_index]
+        booklist_index = track_number - 1
+        logger.info("Getting book at track number %d from booklist", track_number)
+        return self.booklist[booklist_index]
 
-    def get_current_song(self) -> Books:
+    def get_current_book(self) -> Books:
         """
-        Returns the current song being played.
+        Returns the current book being played.
         """
         self.check_if_empty()
-        return self.get_song_by_track_number(self.current_track_number)
+        return self.get_book_by_track_number(self.current_track_number)
 
-    def get_playlist_length(self) -> int:
+    def get_booklist_length(self) -> int:
         """
-        Returns the number of songs in the playlist.
+        Returns the number of books in the booklist.
         """
-        return len(self.playlist)
+        return len(self.booklist)
 
-    def get_playlist_duration(self) -> int:
+    def get_booklist_duration(self) -> int:
         """
-        Returns the total duration of the playlist in seconds.
+        Returns the total duration of the booklist in seconds.
         """
-        return sum(song.duration for song in self.playlist)
+        return sum(book.duration for book in self.booklist)
 
     ##################################################
-    # Playlist Movement Functions
+    # Bookist Movement Functions
     ##################################################
 
     def go_to_track_number(self, track_number: int) -> None:
@@ -171,177 +171,177 @@ class BooklistModel:
         logger.info("Setting current track number to %d", track_number)
         self.current_track_number = track_number
 
-    def move_song_to_beginning(self, song_id: int) -> None:
+    def move_book_to_beginning(self, book_id: int) -> None:
         """
-        Moves a song to the beginning of the playlist.
+        Moves a book to the beginning of the booklist.
 
         Args:
-            song_id (int): The ID of the song to move to the beginning.
+            book_id (int): The ID of the book  to move to the beginning.
         """
-        logger.info("Moving song with ID %d to the beginning of the playlist", song_id)
+        logger.info("Moving book with ID %d to the beginning of the booklist", book_id)
         self.check_if_empty()
-        song_id = self.validate_song_id(song_id)
-        song = self.get_song_by_song_id(song_id)
-        self.playlist.remove(song)
-        self.playlist.insert(0, song)
-        logger.info("Song with ID %d has been moved to the beginning", song_id)
+        book_id = self.validate_book_id(book_id)
+        book = self.get_book_by_book_id(book_id)
+        self.booklist.remove(book)
+        self.booklist.insert(0, book)
+        logger.info("Book with ID %d has been moved to the beginning", book_id)
 
-    def move_song_to_end(self, song_id: int) -> None:
+    def move_book_to_end(self, book_id: int) -> None:
         """
-        Moves a song to the end of the playlist.
+        Moves a book to the end of the booklist.
 
         Args:
-            song_id (int): The ID of the song to move to the end.
+            book_id (int): The ID of the book to move to the end.
         """
-        logger.info("Moving song with ID %d to the end of the playlist", song_id)
+        logger.info("Moving book with ID %d to the end of the booklist", book_id)
         self.check_if_empty()
-        song_id = self.validate_song_id(song_id)
-        song = self.get_song_by_song_id(song_id)
-        self.playlist.remove(song)
-        self.playlist.append(song)
-        logger.info("Song with ID %d has been moved to the end", song_id)
+        book_id = self.validate_book_id(book_id)
+        book = self.get_book_by_book_id(book_id)
+        self.booklist.remove(book)
+        self.booklist.append(book)
+        logger.info("Book with ID %d has been moved to the end", book_id)
 
-    def move_song_to_track_number(self, song_id: int, track_number: int) -> None:
+    def move_book_to_track_number(self, book_id: int, track_number: int) -> None:
         """
-        Moves a song to a specific track number in the playlist.
+        Moves a book to a specific track number in the booklist.
 
         Args:
-            song_id (int): The ID of the song to move.
-            track_number (int): The track number to move the song to (1-indexed).
+            book_id (int): The ID of the book to move.
+            track_number (int): The track number to move the book to (1-indexed).
         """
-        logger.info("Moving song with ID %d to track number %d", song_id, track_number)
+        logger.info("Moving book with ID %d to track number %d", book_id, track_number)
         self.check_if_empty()
-        song_id = self.validate_song_id(song_id)
+        book_id = self.validate_book_id(book_id)
         track_number = self.validate_track_number(track_number)
-        playlist_index = track_number - 1
-        song = self.get_song_by_song_id(song_id)
-        self.playlist.remove(song)
-        self.playlist.insert(playlist_index, song)
-        logger.info("Song with ID %d has been moved to track number %d", song_id, track_number)
+        booklist_index = track_number - 1
+        book= self.get_book_by_book_id(book_id)
+        self.booklist.remove(book)
+        self.booklist.insert(booklist_index, book)
+        logger.info("Book with ID %d has been moved to track number %d", book_id, track_number)
 
-    def swap_songs_in_playlist(self, song1_id: int, song2_id: int) -> None:
+    def swap_books_in_booklist(self, book1_id: int, book2_id: int) -> None:
         """
-        Swaps the positions of two songs in the playlist.
+        Swaps the positions of two books in the booklist.
 
         Args:
-            song1_id (int): The ID of the first song to swap.
-            song2_id (int): The ID of the second song to swap.
+            book1_id (int): The ID of the first book to swap.
+            book2_id (int): The ID of the second book to swap.
 
         Raises:
-            ValueError: If you attempt to swap a song with itself.
+            ValueError: If you attempt to swap a book with itself.
         """
-        logger.info("Swapping songs with IDs %d and %d", song1_id, song2_id)
+        logger.info("Swapping books with IDs %d and %d", book1_id, book2_id)
         self.check_if_empty()
-        song1_id = self.validate_song_id(song1_id)
-        song2_id = self.validate_song_id(song2_id)
+        book1_id = self.validate_book_id(book1_id)
+        book2_id = self.validate_book_id(book2_id)
 
-        if song1_id == song2_id:
-            logger.error("Cannot swap a song with itself, both song IDs are the same: %d", song1_id)
-            raise ValueError(f"Cannot swap a song with itself, both song IDs are the same: {song1_id}")
+        if book1_id == book2_id:
+            logger.error("Cannot swap a book with itself, both book IDs are the same: %d", book1_id)
+            raise ValueError(f"Cannot swap a book with itself, both book IDs are the same: {book1_id}")
 
-        song1 = self.get_song_by_song_id(song1_id)
-        song2 = self.get_song_by_song_id(song2_id)
-        index1 = self.playlist.index(song1)
-        index2 = self.playlist.index(song2)
-        self.playlist[index1], self.playlist[index2] = self.playlist[index2], self.playlist[index1]
-        logger.info("Swapped songs with IDs %d and %d", song1_id, song2_id)
+        book1 = self.get_book_by_book_id(book1_id)
+        book2 = self.get_book_by_book_id(book2_id)
+        index1 = self.booklist.index(book1)
+        index2 = self.booklist.index(book2)
+        self.booklist[index1], self.booklist[index2] = self.booklist[index2], self.booklist[index1]
+        logger.info("Swapped books with IDs %d and %d", book1_id, book2_id)
 
     ##################################################
-    # Playlist Playback Functions
+    # Booklist Playback Functions
     ##################################################
 
-    def play_current_song(self) -> None:
+    def play_current_book(self) -> None:
         """
-        Plays the current song.
+        Plays the current book.
 
         Side-effects:
             Updates the current track number.
-            Updates the play count for the song.
+            Updates the book count for the book.
         """
         self.check_if_empty()
-        current_song = self.get_song_by_track_number(self.current_track_number)
-        logger.info("Playing song: %s (ID: %d) at track number: %d", current_song.title, current_song.id, self.current_track_number)
-        update_play_count(current_song.id)
-        logger.info("Updated play count for song: %s (ID: %d)", current_song.title, current_song.id)
+        current_book = self.get_book_by_track_number(self.current_track_number)
+        logger.info("Playing book: %s (ID: %d) at track number: %d", current_book.title, current_book.id, self.current_track_number)
+        update_book_count(current_book.id)
+        logger.info("Updated book count for book: %s (ID: %d)", current_book.title, current_book.id)
         previous_track_number = self.current_track_number
-        self.current_track_number = (self.current_track_number % self.get_playlist_length()) + 1
+        self.current_track_number = (self.current_track_number % self.get_booklist_length()) + 1
         logger.info("Track number updated from %d to %d", previous_track_number, self.current_track_number)
 
-    def play_entire_playlist(self) -> None:
+    def play_entire_booklist(self) -> None:
         """
-        Plays the entire playlist.
+        Plays the entire booklist.
 
         Side-effects:
             Resets the current track number to 1.
-            Updates the play count for each song.
+            Updates the book count for each book.
         """
         self.check_if_empty()
-        logger.info("Starting to play the entire playlist.")
+        logger.info("Starting to play the entire booklist.")
         self.current_track_number = 1
         logger.info("Reset current track number to 1.")
-        for _ in range(self.get_playlist_length()):
+        for _ in range(self.get_booklist_length()):
             logger.info("Playing track number: %d", self.current_track_number)
-            self.play_current_song()
-        logger.info("Finished playing the entire playlist. Current track number reset to 1.")
+            self.play_current_book()
+        logger.info("Finished playing the entire booklist. Current track number reset to 1.")
 
-    def play_rest_of_playlist(self) -> None:
+    def play_rest_of_booklist(self) -> None:
         """
-        Plays the rest of the playlist from the current track.
+        Plays the rest of the booklist from the current track.
 
         Side-effects:
             Updates the current track number back to 1.
-            Updates the play count for each song in the rest of the playlist.
+            Updates the play count for each book in the rest of the book list.
         """
         self.check_if_empty()
-        logger.info("Starting to play the rest of the playlist from track number: %d", self.current_track_number)
-        for _ in range(self.get_playlist_length() - self.current_track_number + 1):
+        logger.info("Starting to play the rest of the booklist from track number: %d", self.current_track_number)
+        for _ in range(self.get_booklist_length() - self.current_track_number + 1):
             logger.info("Playing track number: %d", self.current_track_number)
-            self.play_current_song()
-        logger.info("Finished playing the rest of the playlist. Current track number reset to 1.")
+            self.play_current_book()
+        logger.info("Finished playing the rest of the booklist. Current track number reset to 1.")
 
-    def rewind_playlist(self) -> None:
+    def rewind_booklist(self) -> None:
         """
-        Rewinds the playlist to the beginning.
+        Rewinds the booklist to the beginning.
         """
         self.check_if_empty()
-        logger.info("Rewinding playlist to the beginning.")
+        logger.info("Rewinding booklist to the beginning.")
         self.current_track_number = 1
 
     ##################################################
     # Utility Functions
     ##################################################
 
-    def validate_song_id(self, song_id: int, check_in_playlist: bool = True) -> int:
+    def validate_book_id(self, book_id: int, check_in_booklist: bool = True) -> int:
         """
-        Validates the given song ID, ensuring it is a non-negative integer.
+        Validates the given book ID, ensuring it is a non-negative integer.
 
         Args:
-            song_id (int): The song ID to validate.
-            check_in_playlist (bool, optional): If True, checks if the song ID exists in the playlist.
+            book_id (int): The book ID to validate.
+            check_in_booklist (bool, optional): If True, checks if the book  ID exists in the booklist.
                                                 If False, skips the check. Defaults to True.
 
         Raises:
-            ValueError: If the song ID is not a valid non-negative integer.
+            ValueError: If the book ID is not a valid non-negative integer.
         """
         try:
-            song_id = int(song_id)
-            if song_id < 0:
-                logger.error("Invalid song id %d", song_id)
-                raise ValueError(f"Invalid song id: {song_id}")
+            book_id = int(book_id)
+            if book_id < 0:
+                logger.error("Invalid book id %d", book_id)
+                raise ValueError(f"Invalid book id: {book_id}")
         except ValueError:
-            logger.error("Invalid song id %s", song_id)
-            raise ValueError(f"Invalid song id: {song_id}")
+            logger.error("Invalid book id %s", book_id)
+            raise ValueError(f"Invalid book id: {book_id}")
 
-        if check_in_playlist:
-            if song_id not in [song_in_playlist.id for song_in_playlist in self.playlist]:
-                logger.error("Song with id %d not found in playlist", song_id)
-                raise ValueError(f"Song with id {song_id} not found in playlist")
+        if check_in_booklist:
+            if book_id not in [book_in_booklist.id for book_in_booklist in self.booklist]:
+                logger.error("Book with id %d not found in booklist", book_id)
+                raise ValueError(f"Book with id {book_id} not found in booklist")
 
-        return song_id
+        return book_id
 
     def validate_track_number(self, track_number: int) -> int:
         """
-        Validates the given track number, ensuring it is a non-negative integer within the playlist's range.
+        Validates the given track number, ensuring it is a non-negative integer within the booklist's range.
 
         Args:
             track_number (int): The track number to validate.
@@ -351,7 +351,7 @@ class BooklistModel:
         """
         try:
             track_number = int(track_number)
-            if track_number < 1 or track_number > self.get_playlist_length():
+            if track_number < 1 or track_number > self.get_booklist_length():
                 logger.error("Invalid track number %d", track_number)
                 raise ValueError(f"Invalid track number: {track_number}")
         except ValueError:
@@ -362,11 +362,11 @@ class BooklistModel:
 
     def check_if_empty(self) -> None:
         """
-        Checks if the playlist is empty, logs an error, and raises a ValueError if it is.
+        Checks if the booklist is empty, logs an error, and raises a ValueError if it is.
 
         Raises:
-            ValueError: If the playlist is empty.
+            ValueError: If the booklist is empty.
         """
-        if not self.playlist:
-            logger.error("Playlist is empty")
-            raise ValueError("Playlist is empty")
+        if not self.booklist:
+            logger.error("Booklist is empty")
+            raise ValueError("Booklist is empty")
