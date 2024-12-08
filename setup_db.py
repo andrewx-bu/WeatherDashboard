@@ -13,6 +13,16 @@ cursor.execute('''
     )
 ''')
 
+# Create the users table if it doesn't exist
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        salt TEXT NOT NULL,
+        password_hash TEXT NOT NULL
+    )
+''')
+
 conn.commit()
 conn.close()
 
