@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from openweather_api import get_coords, get_forecast
 from helpers import convert_wind_deg_to_direction
 import logging
+import bcrypt
 
 # Load env variables
 load_dotenv()
@@ -383,6 +384,165 @@ def forecast():
     else:
         logging.error(f"Failed to fetch forecast data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch forecast data'}), 500)
+
+
+#############################
+#                           #
+#         Passwords         #
+#                           #
+#############################
+
+@app.route('/create-account', methods=['POST'])
+def create_account():
+    """
+    POST: Allows a user to create an account with a username and password.
+
+    Expected JSON Input:
+        - username (str): The username for the new account.
+        - password (str): The password for the new account.
+
+    Returns:
+        Response: JSON response with status and a success or error message.
+
+    Raises:
+        400 error if the username or password is missing, or the username is already taken.
+        500 error if there is an issue with the database operation.
+    """
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return make_response(jsonify({'error': 'Username and password are required'}), 400)
+
+    salt = bcrypt.gensalt()
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            'INSERT INTO users (username, salt, password_hash) VALUES (?, ?, ?)',
+            (username, salt.decode(), password_hash.decode())
+        )
+        conn.commit()
+        conn.close()
+
+        return make_response(jsonify({'status': 'success', 'message': 'Account created'}), 201)
+
+    except sqlite3.IntegrityError:
+        return make_response(jsonify({'error': 'Username already exists'}), 400)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 500)
+
+@app.route('/login', methods=['GET'])
+def login():
+    """
+    GET: Authenticates a user by verifying the provided password with the stored hash.
+
+    Query Parameters:
+        - username (str): The username of the account.
+        - password (str): The password to verify.
+
+    Returns:
+        Response: JSON response indicating success or failure of login.
+
+    Raises:
+        400 error if the username or password is missing.
+        404 error if the username does not exist.
+        401 error if the password is incorrect.
+        500 error if there is an issue with the database operation.
+    """
+    username = request.args.get('username')
+    password = request.args.get('password')
+
+    if not username or not password:
+        return make_response(jsonify({'error': 'Username and password are required'}), 400)
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            'SELECT salt, password_hash FROM users WHERE username = ?',
+            (username,)
+        )
+        user = cursor.fetchone()
+        conn.close()
+
+        if not user:
+            return make_response(jsonify({'error': 'Invalid username or password'}), 404)
+
+        salt, stored_hash = user
+        if bcrypt.hashpw(password.encode('utf-8'), stored_hash.encode()) == stored_hash.encode():
+            return make_response(jsonify({'status': 'success', 'message': 'Login successful'}), 200)
+        else:
+            return make_response(jsonify({'error': 'Invalid username or password'}), 401)
+
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 500)
+
+@app.route('/update-password', methods=['PUT'])
+def update_password():
+    """
+    PUT: Updates the password for an existing user account.
+
+    Expected JSON Input:
+        - username (str): The username of the account.
+        - old_password (str): The current password for the account.
+        - new_password (str): The new password to replace the old one.
+
+    Returns:
+        Response: JSON response with status and a success or error message.
+
+    Raises:
+        400 error if the username, old password, or new password is missing.
+        401 error if the old password is incorrect.
+        404 error if the username does not exist.
+        500 error if there is an issue with the database operation.
+    """
+    data = request.get_json()
+    username = data.get('username')
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    if not username or not old_password or not new_password:
+        return make_response(jsonify({'error': 'Username, old password, and new password are required'}), 400)
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            'SELECT salt, password_hash FROM users WHERE username = ?',
+            (username,)
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            return make_response(jsonify({'error': 'Invalid username or password'}), 404)
+
+        salt, stored_hash = user
+
+        if bcrypt.hashpw(old_password.encode('utf-8'), stored_hash.encode()) != stored_hash.encode():
+            return make_response(jsonify({'error': 'Old password is incorrect'}), 401)
+
+        new_salt = bcrypt.gensalt()
+        new_hash = bcrypt.hashpw(new_password.encode('utf-8'), new_salt)
+
+        cursor.execute(
+            'UPDATE users SET salt = ?, password_hash = ? WHERE username = ?',
+            (new_salt.decode(), new_hash.decode(), username)
+        )
+        conn.commit()
+        conn.close()
+
+        return make_response(jsonify({'status': 'success', 'message': 'Password updated'}), 200)
+
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 500)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
