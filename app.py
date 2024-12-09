@@ -4,8 +4,7 @@ import requests
 import urllib3
 import sqlite3
 from dotenv import load_dotenv
-from openweather_api import get_coords, get_forecast
-from helpers import convert_wind_deg_to_direction
+from openweather_api import get_coords, get_forecast, get_current_weather
 import logging
 import bcrypt
 
@@ -44,6 +43,12 @@ def get_db_connection():
         logging.error(f"Database connection error: {e}")
         raise
 
+#############################
+#                           #
+#      Health Checks        #
+#                           #
+#############################
+
 # Route to check health
 @app.route('/api/health', methods=['GET'])
 def healthcheck():
@@ -76,6 +81,11 @@ def db_check():
         logging.error(f"Database check failed: {e}")
         return make_response(jsonify({'error': str(e)}), 404)
 
+#############################
+#                           #
+#   Favorites  Management   #
+#                           #
+#############################
 
 # Route to add a favorite location
 @app.route('/api/add-favorite', methods=['POST'])
@@ -320,6 +330,11 @@ def get_favorites():
         logging.error(f"Error fetching favorites: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
+#############################
+#                           #
+#         API Calls         #
+#                           #
+#############################
 
 # Route to get coordinates of a city
 @app.route('/api/coords', methods=['GET'])
@@ -385,6 +400,44 @@ def forecast():
         logging.error(f"Failed to fetch forecast data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch forecast data'}), 500)
 
+# Route to get current weather for a city
+@app.route('/api/weather', methods=['GET'])
+def current_weather():
+    """
+    GET: Fetch current weather for a city.
+
+    Query Parameters:
+        - city (str): Name of the city.
+        - country_code (str, optional): Country code.
+        - units (str, optional): Units of measurement (standard, metric, imperial). Defaults to "imperial".
+
+    Returns:
+        Response: JSON response containing current weather data.
+    """
+    city = request.args.get('city')
+    country_code = request.args.get('country_code', None)
+    units = request.args.get('units', 'imperial')
+
+    logging.info(f"Current weather request received for city: {city}, country_code: {country_code}, units: {units}")
+
+    if not city:
+        logging.warning("Missing 'city' parameter in current weather request.")
+        return make_response(jsonify({'error': 'City is required'}), 400)
+
+    coords = get_coords(city, country_code)
+    if not coords:
+        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
+
+    logging.info(f"Coordinates for city {city}: {coords}")
+
+    weather_data = get_current_weather(coords['lat'], coords['lon'], units)
+    if weather_data:
+        logging.info(f"Successfully fetched current weather data for city: {city}")
+        return make_response(jsonify(weather_data), 200)
+    else:
+        logging.error(f"Failed to fetch current weather data for city: {city}, coordinates: {coords}")
+        return make_response(jsonify({'error': 'Could not fetch current weather data'}), 500)
 
 #############################
 #                           #

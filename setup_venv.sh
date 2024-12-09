@@ -17,8 +17,8 @@ fi
 
 # Activate the virtual environment
 echo "Activating virtual environment..."
-# /bin for Mac
-source "$VENV_DIR/Scripts/activate" || { echo "Error: Failed to activate virtual environment."; exit 1; }
+# /bin for Mac, /Scripts for Windows
+source "$VENV_DIR/bin/activate" || { echo "Error: Failed to activate virtual environment."; exit 1; }
 
 # Install dependencies
 if [ -f "$REQUIREMENTS_FILE" ]; then

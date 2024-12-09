@@ -80,3 +80,33 @@ def get_forecast(lat: float, lon: float, units: str = "imperial"):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching forecast: {e}")
         return None
+
+# Function to get current weather
+def get_current_weather(lat: float, lon: float, units: str = "imperial"):
+    """
+    Fetches current weather.
+
+    Args:
+        lat (float): Latitude of the location.
+        lon (float): Longitude of the location.
+        units (str): Units of measurement (standard, metric, imperial). Defaults to "imperial".
+
+    Returns:
+        dict: A dictionary containing current weather data.
+    """
+    url = f"http://api.openweathermap.org/data/2.5/weather"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "units": units,
+        "appid": API_KEY
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        logging.info(f"Current weather data retrieved for lat={lat}, lon={lon}")
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching current weather: {e}")
+        return None
