@@ -13,7 +13,7 @@
 * Tong Zhang
 
 ## APi Call Route
-### Route1: openweather_api/get-coords
+### Route1: app/coords
 * **Request Type:** GET
 * **Purpose:** Fetches the coordinates (latitude, longitude) of a city.
 * **Request Parameters:**
@@ -22,7 +22,7 @@
 * **Response Format:** JSON
   * Success Response Example:
     * Code: 200
-    * Content: ``` { "message": "Found coordinates: {data[0]['lat']}, {data[0]['lon']}"} ```
+    * Content: ``` { "coordinates": {coords}} ```
 * **Example Request:**
   ```
     {
@@ -32,12 +32,11 @@
 * **Example Response:**
   ```
     {
-      "message": "Found coordinates: 37.7790262, -122.419906",
-      "status": "200"
+      "coordinates": "37.7790262, -122.419906"
     }
   ```
 
-### Route2: openweather_api/get-forecast
+### Route2: app/forecast
 * **Request Type:** GET
 * **Purpose:** Fetches weather forecast.
 * **Request Parameters:**
@@ -98,7 +97,7 @@
         },
         // ... Additional forecast entries ...
      ],
-     "cod": "200",
+     "cod": "success",
      "message": "Forecast data retrieved for lat=37.7790262, lon=-122.419906",
      "cnt": 40,
      "city": {
@@ -117,7 +116,7 @@
     }
   ```
 
-### Route3: openweather_api/get-air-pollution-forecast
+### Route3: app/air-pollution-forecast
 * **Request Type:** GET
 * **Purpose:** Fetches air pollution forecast data for a location.
 * **Request Parameters:**
@@ -162,7 +161,7 @@
    }
   ```
 
-### Route4: openweather_api/get-current-weather
+### Route4: app/current-weather
 * **Request Type:** GET
 * **Purpose:** Fetches current weather. for a location.
 * **Request Parameters:**
@@ -230,7 +229,7 @@
    }
   ```
   
-### Route5: openweather_api/get-air-pollution
+### Route5: app/air-pollution
 * **Request Type:** GET
 * **Purpose:** Fetches current air pollution data for a location.
 * **Request Body:**
@@ -278,7 +277,7 @@
 
 ## Favorite Management
 
-### Route1: models/FavoriteModel/add-favorite
+### Route1: app/add-favorite
 * **Request Type:** POST
 * **Purpose:** Add a favorite location for a user.
 * **Request Body:**
@@ -288,7 +287,13 @@
 * **Response Format:** JSON
   * Success Response Example:
     * Code: 200
-    * Content: ``` { "message": "User {user_id} added new favorite location: {location}"} ```
+    * Content:
+      ```
+        {
+          "message": "Favorite location added",
+          "status": "success"
+        }
+      ```
 * **Example Request:**
   ```
     {
@@ -299,12 +304,12 @@
 * **Example Response:**
   ```
     {
-      "message": "User 1 added new favorite location: San Francisco",
-      "status": "200"
+      "message": "Favorite location added",
+      "status": "success"
     }
   ```
 
-### Route2: models/FavoriteModel/update-favorite
+### Route2: app/update-favorite
 * **Request Type:** PUT
 * **Purpose:** Update a user's favorite location.
 * **Request Body:**
@@ -314,7 +319,13 @@
 * **Response Format:** JSON
   * Success Response Example:
     * Code: 200
-    * Content: ``` { "message": "User {user_id} updated favorite location '{old_location}' to '{new_location}'"} ```
+    * Content:
+      ```
+        {
+          "message": "{old_location} updated to {new_location} for user {user_id}.",
+          "status": "success"
+        }
+      ```
 * **Example Request:**
   ```
     {
@@ -326,12 +337,12 @@
 * **Example Response:**
   ```
     {
-      "message": "User 1 updated favorite location San Francisco to San Jose",
-      "status": "200"
+      "message": "San Francisco updated to San Jose for user 1.",
+      "status": "success"
     }
   ```
 
-### Route3: models/FavoriteModel/remove-favorite
+### Route3: app/remove-favorite
 * **Request Type:** DELETE
 * **Purpose:** Remove a favorite location for a user.
 * **Request Body:**
@@ -340,7 +351,13 @@
 * **Response Format:** JSON
   * Success Response Example:
     * Code: 200
-    * Content: ``` { "message": "User {user_id} removed new favorite location: {location}"} ```
+    * Content:
+      ```
+       {
+         "message": "Favorite location removed",
+         "status": "success"
+       }
+      ```
 * **Example Request:**
   ```
     {
@@ -352,13 +369,13 @@
 * **Example Response:**
   ```
     {
-      "message": "User 1 removed new favorite location: San Francisco",
-      "status": "200"
+      "message": "Favorite location removed",
+      "status": "success"
     }
   ```
 
 
-### Route4: models/FavoriteModel/clear-favorites
+### Route4: app/clear-favorites
 * **Request Type:** DELETE
 * **Purpose:** Clear all favorite locations for a user.
 * **Request Body:**
@@ -366,7 +383,13 @@
 * **Response Format:**
   * Success Response Example:
     * Code: 200
-    * Content: { "message": "User {user_id} cleared all favorite locations."}
+    * Content:
+     ```
+       {
+         "message": "All favorite locations removed",
+         "status": "success"
+       }
+     ```
 * **Example Request:**
   ```
     {
@@ -376,12 +399,12 @@
 * **Example Response:**
   ```
     {
-      "message": "User 1 cleared all favorite locations.",
-      "status": "200"
+      "message": "All favorite locations removed",
+      "status": "success"
     }
   ```
 
-### Route5: models/FavoriteModel/get-favorites
+### Route5: app/get-favorites
 * **Request Type:** GET
 * **Purpose:** Get all favorite locations for a user.
 * **Request Parameters:**
@@ -389,7 +412,17 @@
 * **Response Format:**
   * Success Response Example:
     * Code: 200
-    * Content: { "message": "Fetched {len(favorites)} favorite(s) for user {user_id}."}
+    * Content:
+    ```
+      {
+        "favorite":
+         [ {'id': fav[0],
+            'location': fav[1],
+            'created_at': fav[2],
+            'updated_at': fav[3]} for fav in favorites
+         ]
+      }
+    ```
 * **Example Request:**
   ```
     {
@@ -401,15 +434,95 @@
     {
       "favorites": [
         {
+          "id": 101,
           "location": "New York",
+          "created_at": "2024-12-09T12:34:56",
+          "updated_at": "2021-12-10T10:20:30"
         },
         {
-          "location": "San Francisco",
+          "id": 102,
+          "location": "Paris",
+          "created_at": "2024-12-09T11:20:30",
+          "updated_at": "2024-12-10T09:15:00"
         }
-      ],
-      "status": "200"
+      ]
     }
   ```
+
   
 ## User Management
-![RouteScreenshot](https://github.com/andrewx-bu/WeatherDashboard/blob/f598170e1e1666e56b2582f0e12ae47d3a9a4d87/static/image/User%20Management%20Route.png)
+### Route1: app/create-user
+* **Request Type:** POST
+* **Purpose:** Creates a new user in the database with the given username and password. The password is hashed before being stored.
+* **Request Parameters:**
+  * username (str): The username of the user to be created.
+  * password (str): The password of the user to be created.
+
+* **Response Format:**
+  * Success Response Example:
+    * Code: 200
+    * Content: { "message": "User '{username}' created successfully."}
+* **Example Request:**
+  ```
+    {
+      "username": "testuser",
+      "password": "securepassword"
+    }
+  ```
+* **Example Response:**
+  ```
+    {
+      "message": "User testuser created successfully."
+      "status": "success"
+    }
+  ```
+
+### Route2: app/login
+* **Request Type:** GET
+* **Purpose:** Authenticates a user by verifying the provided password with the stored hash.
+* **Request Parameters:**
+  * username (str): The username of the account.
+  * password (str): The password to verify.
+* **Response Format:**
+  * Success Response Example:
+    * Code: 200
+    * Content: { "message": "Login successful"}
+* **Example Request:**
+  ```
+    {
+      "username": "testuser",
+      "password": "securepassword"
+    }
+  ```
+* **Example Response:**
+  ```
+    {
+      "message": "Login successful",
+      "status": "success"
+    }
+  ```
+
+### Route3: app/update-password
+* **Request Type:** PUT
+* **Purpose:** Updates the password for an existing user account.
+* **Request Body:**
+  * username (str): The username of the user whose password will be updated.
+  * new_password (str): The new password to be set for the user.
+* **Response Format:**
+  * Success Response Example:
+    * Code: 200
+    * Content: { "message": "Password for user '{username}' updated successfully."}
+* **Example Request:**
+  ```
+    {
+      "username": "testuser",
+      "password": "securepassword"
+    }
+  ```
+* **Example Response:**
+  ```
+    {
+      "message": "Password updated",
+      "status": "success"
+    }
+  ```
