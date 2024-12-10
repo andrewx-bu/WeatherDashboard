@@ -4,7 +4,7 @@ import requests
 import urllib3
 import sqlite3
 from dotenv import load_dotenv
-from openweather_api import get_coords, get_forecast, get_current_weather
+from openweather_api import get_coords, get_forecast, get_current_weather, get_air_pollution
 import logging
 import bcrypt
 
@@ -693,6 +693,45 @@ def current_weather():
     else:
         logging.error(f"Failed to fetch current weather data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch current weather data'}), 500)
+
+# Route to get air pollution data for a city
+@app.route('/api/air-pollution', methods=['GET'])
+def air_pollution():
+    """
+    GET: Fetch air pollution data for a city.
+
+    Query Parameters:
+        - city (str): Name of the city.
+        - country_code (str, optional): Country code.
+
+    Returns:
+        Response: JSON response containing air pollution data.
+    """
+    city = request.args.get('city')
+    country_code = request.args.get('country_code', None)
+
+    logging.info(f"Air pollution request received for city: {city}, country_code: {country_code}")
+
+    if not city:
+        logging.warning("Missing 'city' parameter in air pollution request.")
+        return make_response(jsonify({'error': 'City is required'}), 400)
+
+    # Get coordinates for the city
+    coords = get_coords(city, country_code)
+    if not coords:
+        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
+
+    logging.info(f"Coordinates for city {city}: {coords}")
+
+    # Fetch air pollution data using coordinates
+    pollution_data = get_air_pollution(coords['lat'], coords['lon'])
+    if pollution_data:
+        logging.info(f"Successfully fetched air pollution data for city: {city}")
+        return make_response(jsonify(pollution_data), 200)
+    else:
+        logging.error(f"Failed to fetch air pollution data for city: {city}, coordinates: {coords}")
+        return make_response(jsonify({'error': 'Could not fetch air pollution data'}), 500)
 
 if __name__ == '__main__':
     app.run(debug=True)
