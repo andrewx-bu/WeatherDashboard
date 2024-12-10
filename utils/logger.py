@@ -15,5 +15,6 @@ def setup_logger():
 
     # Ignore some debug logs that contain private information (API Key)
     logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     return logging.getLogger()
