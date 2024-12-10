@@ -412,4 +412,4 @@
   ```
   
 ## User Management
-![RouteScreenshot](static/image/User Management Route.png)
+![RouteScreenshot](https://github.com/andrewx-bu/WeatherDashboard/blob/f598170e1e1666e56b2582f0e12ae47d3a9a4d87/static/image/User%20Management%20Route.png)
