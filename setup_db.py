@@ -1,4 +1,5 @@
 import sqlite3
+from utils.logger import setup_logger
 
 def setup_database():
     # Set up the SQLite database with the necessary tables and foreign key constraints.
@@ -33,9 +34,11 @@ def setup_database():
         ''')
 
         conn.commit()
+        logger.info("Database setup complete")
         print("Database setup complete!")
 
     except sqlite3.Error as e:
+        logger.error(f"An error occurred while setting up the database: {e}")
         print(f"An error occurred while setting up the database: {e}")
     finally:
         # Ensure the connection is closed
@@ -43,4 +46,5 @@ def setup_database():
             conn.close()
 
 if __name__ == "__main__":
+    logger = setup_logger()
     setup_database()

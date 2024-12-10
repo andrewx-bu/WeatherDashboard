@@ -1,48 +1,17 @@
 import os
-from flask import Flask, request, make_response, jsonify
-import requests
-import urllib3
 import sqlite3
+from flask import Flask, request, make_response, jsonify
 from dotenv import load_dotenv
+from models.UserModel import UserModel
 from openweather_api import get_coords, get_forecast, get_air_pollution_forecast ,get_current_weather, get_air_pollution
-import logging
-import bcrypt
+from utils.logger import setup_logger
+from utils.sql import get_db_connection
 
-# Load env variables
 load_dotenv()
-
-# Set up logging to a file
-logging.basicConfig(
-    filename='app.log',
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-# prevent debug logs from being shown
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
+logger = setup_logger()
 
 # Flask app initialization
 app = Flask(__name__)
-
-# Connect to db
-def get_db_connection():
-    """
-    Establish connection to SQLite database.
-    
-    Returns:
-        sqlite3.Connection: Database connection object.
-
-    Raises:
-        sqlite3.DatabaseError: If there is an issue with the database connection.
-    """
-    try:
-        conn = sqlite3.connect('weather.db')
-        conn.execute('PRAGMA foreign_keys = ON;')
-        return conn
-    except sqlite3.Error as e:
-        logging.error(f"Database connection error: {e}")
-        raise
 
 #############################
 #                           #
@@ -59,7 +28,7 @@ def healthcheck():
     Returns:
         JSON response indicating the health status of the service.
     """
-    logging.info('Health check')
+    logger.info('Health check')
     return make_response(jsonify({'status': 'healthy'}), 200)
 
 # Route to check databse health
@@ -76,10 +45,10 @@ def db_check():
     try:
         conn = get_db_connection()
         conn.close()
-        logging.info("Database connection is OK.")
+        logger.info("Database connection is OK.")
         return make_response(jsonify({'database_status': 'healthy'}), 200)
     except Exception as e:
-        logging.error(f"Database check failed: {e}")
+        logger.error(f"Database check failed: {e}")
         return make_response(jsonify({'error': str(e)}), 404)
 
 #############################
@@ -88,6 +57,7 @@ def db_check():
 #                           #
 #############################
 
+# Route to create a new account
 @app.route('/create-account', methods=['POST'])
 def create_account():
     """
@@ -109,32 +79,26 @@ def create_account():
     password = data.get('password')
 
     if not username or not password:
-        logging.warning("Create account request missing username or password.")
+        logger.warning("Create account request missing username or password.")
         return make_response(jsonify({'error': 'Username and password are required'}), 400)
 
-    salt = bcrypt.gensalt()
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
+    if not UserModel.check_password_validity(password):
+        logger.warning("Password does not meet complexity requirements.")
+        return make_response(jsonify({'error': 'Password must be between 8 and 20 characters long, contain at least one letter and one digit.'}), 400)
 
+    if UserModel.is_username_taken(username):
+        logger.warning(f"Username {username} is already taken.")
+        return make_response(jsonify({'error': 'Username is already taken'}), 400)
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO users (username, salt, password_hash) VALUES (?, ?, ?)',
-            (username, salt.decode(), password_hash.decode())
-        )
-        conn.commit()
-        conn.close()
-        
-        logging.info(f"Account created for username: {username}")
+        UserModel.create_user(username, password)
+        logger.info(f"Account created for username: {username}")
         return make_response(jsonify({'status': 'success', 'message': 'Account created'}), 201)
-
-    except sqlite3.IntegrityError:
-        logging.warning(f"Account creation failed: Username '{username}' already exists.")
-        return make_response(jsonify({'error': 'Username already exists'}), 400)
     except Exception as e:
-        logging.error(f"Account creation failed: {e}")
+        logger.error(f"Account creation failed: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
+# Route to delete an existing account
 @app.route('/delete-account', methods=['DELETE'])
 def delete_account():
     """
@@ -161,30 +125,18 @@ def delete_account():
         return make_response(jsonify({'error': 'Username and password are required'}), 400)
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT id, salt, password_hash FROM users WHERE username = ?', (username,))
-        user = cursor.fetchone()
-
-        if not user:
-            return make_response(jsonify({'error': 'User not found'}), 404)
-
-        user_id, salt, password_hash = user
-
-        # Verify password
-        if bcrypt.hashpw(password.encode('utf-8'), password_hash.encode()) != password_hash.encode():
-            return make_response(jsonify({'error': 'Incorrect password'}), 401)
-
-        cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
-        conn.commit()
-        conn.close()
-
-        return make_response(jsonify({'status': 'success', 'message': 'Account and associated favorites deleted'}), 200)
-
+        # Check if the user exists and password is correct before deletion
+        if not UserModel.authenticate_user(username, password):
+            return make_response(jsonify({'error': 'Incorrect password or user not found'}), 401)
+        UserModel.delete_user(username)
+        logger.info(f"Account deleted for username: {username}")
+        return make_response(jsonify({'status': 'success', 'message': 'Account deleted'}), 200)
+    
     except Exception as e:
+        logger.error(f"Account deletion failed: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
+# Route to login to an account
 @app.route('/login', methods=['GET'])
 def login():
     """
@@ -208,35 +160,22 @@ def login():
     password = data.get('password')
 
     if not username or not password:
-        logging.warning("Login request missing username or password.")
+        logger.warning("Login request missing username or password.")
         return make_response(jsonify({'error': 'Username and password are required'}), 400)
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'SELECT salt, password_hash FROM users WHERE username = ?', 
-            (username,)
-        )
-        user = cursor.fetchone()
-        conn.close()
-
-        if not user:
-            logging.warning(f"Login failed: Username '{username}' does not exist.")
-            return make_response(jsonify({'error': 'Invalid username or password'}), 404)
-
-        salt, stored_hash = user
-        if bcrypt.hashpw(password.encode('utf-8'), stored_hash.encode()) == stored_hash.encode():
-            logging.info(f"User '{username}' logged in successfully.")
+        is_authenticated = UserModel.authenticate_user(username, password)
+        if is_authenticated:
+            logger.info(f"User '{username}' logged in successfully.")
             return make_response(jsonify({'status': 'success', 'message': 'Login successful'}), 200)
         else:
-            logging.warning(f"Login failed for user '{username}': Incorrect password.")
+            logger.warning(f"Login failed for user '{username}': Incorrect password.")
             return make_response(jsonify({'error': 'Invalid username or password'}), 401)
-
     except Exception as e:
-        logging.error(f"Login failed: {e}")
+        logger.error(f"Login failed: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
+# Route to update password for an account
 @app.route('/update-password', methods=['PUT'])
 def update_password():
     """
@@ -262,46 +201,26 @@ def update_password():
     new_password = data.get('new_password')
 
     if not username or not old_password or not new_password:
-        logging.warning("Update password request missing parameters.")
+        logger.warning("Update password request missing parameters.")
         return make_response(jsonify({'error': 'Username, old password, and new password are required'}), 400)
 
+    if not UserModel.check_password_validity(new_password):
+        logger.warning("New password does not meet complexity requirements.")
+        return make_response(jsonify({'error': 'New password must be between 8 and 20 characters long, contain at least one letter and one digit.'}), 400)
+    
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            'SELECT salt, password_hash FROM users WHERE username = ?',
-            (username,)
-        )
-        user = cursor.fetchone()
-
-        if not user:
-            conn.close()
-            logging.warning(f"Password update failed: Username '{username}' not found.")
-            return make_response(jsonify({'error': 'Invalid username or password'}), 404)
-
-        salt, stored_hash = user
-        if bcrypt.hashpw(old_password.encode('utf-8'), stored_hash.encode()) != stored_hash.encode():
-            conn.close()
-            logging.warning(f"Password update failed for '{username}': Incorrect old password.")
+        # Check if old password is correct
+        if not UserModel.authenticate_user(username, old_password):
             return make_response(jsonify({'error': 'Old password is incorrect'}), 401)
 
-        new_salt = bcrypt.gensalt()
-        new_hash = bcrypt.hashpw(new_password.encode('utf-8'), new_salt)
-        cursor.execute(
-            'UPDATE users SET salt = ?, password_hash = ? WHERE username = ?',
-            (new_salt.decode(), new_hash.decode(), username)
-        )
-        conn.commit()
-        conn.close()
-
-        logging.info(f"Password updated for user '{username}'.")
+        UserModel.update_password(username, new_password)
+        logger.info(f"Password updated for user '{username}'.")
         return make_response(jsonify({'status': 'success', 'message': 'Password updated'}), 200)
-
     except Exception as e:
-        logging.error(f"Password update failed: {e}")
+        logger.error(f"Password update failed: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
-# Route to get all users
+# Route to get all accounts/users
 @app.route('/get-all-users', methods=['GET'])
 def get_all_users():
     """
@@ -314,21 +233,13 @@ def get_all_users():
         500 error if there is an issue fetching the users.
     """
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, username FROM users')
-        users = cursor.fetchall()
-        conn.close()
-
-        if not users:
+        users = UserModel.get_all_users()
+        if users:
+            return make_response(jsonify({'users': users}), 200)
+        else:
             return make_response(jsonify({'message': 'No users found'}), 404)
-
-        user_list = [{'id': user[0], 'username': user[1]} for user in users]
-        logging.info(f"Fetched {len(user_list)} users.")
-        return make_response(jsonify({'users': user_list}), 200)
-
     except Exception as e:
-        logging.error(f"Error fetching users: {e}")
+        logger.error(f"Error fetching users: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 #############################
@@ -360,7 +271,7 @@ def add_favorite():
         location = data.get('location')
 
         if not user_id or not location:
-            logging.warning("user_id or location missing in request.")
+            logger.warning("user_id or location missing in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
 
         with get_db_connection() as conn:
@@ -371,7 +282,7 @@ def add_favorite():
             existing_favorite = cursor.fetchone()
 
             if existing_favorite:
-                logging.warning(f"Favorite location '{location}' already exists for user {user_id}.")
+                logger.warning(f"Favorite location '{location}' already exists for user {user_id}.")
                 return make_response(jsonify({'error': f"'{location}' is already a favorite location for this user."}), 400)
 
             cursor.execute(
@@ -380,7 +291,7 @@ def add_favorite():
             )
             conn.commit()
 
-        logging.info(f"Favorite location '{location}' added for user {user_id}.")
+        logger.info(f"Favorite location '{location}' added for user {user_id}.")
         return make_response(jsonify({'status': 'success', 'message': 'Favorite location added'}), 201)
 
     except sqlite3.IntegrityError as e:
@@ -389,7 +300,7 @@ def add_favorite():
             return jsonify({'error': 'User ID does not exist'}), 400
         return jsonify({'error': str(e)}), 500
     except Exception as e:
-        logging.error(f"Error adding favorite: {e}")
+        logger.error(f"Error adding favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to remove a favorite location for a user
@@ -415,7 +326,7 @@ def remove_favorite():
         location = data.get('location')
 
         if not user_id or not location:
-            logging.warning("user_id or location missing in request.")
+            logger.warning("user_id or location missing in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
 
         conn = get_db_connection()
@@ -426,7 +337,7 @@ def remove_favorite():
         favorite = cursor.fetchone()
 
         if not favorite:
-            logging.warning(f"Favorite location '{location}' not found for user {user_id}.")
+            logger.warning(f"Favorite location '{location}' not found for user {user_id}.")
             return make_response(jsonify({'error': f"'{location}' is not a favorite location for this user."}), 400)
 
         # Remove the favorite location from the database
@@ -435,11 +346,11 @@ def remove_favorite():
         conn.commit()
         conn.close()
 
-        logging.info(f"Favorite location '{location}' removed for user {user_id}.")
+        logger.info(f"Favorite location '{location}' removed for user {user_id}.")
         return make_response(jsonify({'status': 'success', 'message': 'Favorite location removed'}), 200)
 
     except Exception as e:
-        logging.error(f"Error removing favorite: {e}")
+        logger.error(f"Error removing favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to update a favorite for a user
@@ -459,6 +370,7 @@ def update_favorite():
     Raises:
         400 error if missing input.
         404 error if the old location does not exist for the user.
+        409 error if the new location already exists as a favorite.
         500 error if there is an issue updating the favorite location in the database.
     """
     try:
@@ -468,11 +380,19 @@ def update_favorite():
         new_location = data.get('new_location')
 
         if not user_id or not old_location or not new_location:
-            logging.warning("Missing user_id, old_location, or new_location.")
+            logger.warning("Missing user_id, old_location, or new_location.")
             return make_response(jsonify({'error': 'user_id, old_location, and new_location are required'}), 400)
 
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Check if the new location already exists as a favorite for the user
+        cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, new_location))
+        existing_favorite = cursor.fetchone()
+        if existing_favorite:
+            conn.close()
+            logger.warning(f"User {user_id} attempted to update favorite location to an already existing favorite: '{new_location}'.")
+            return make_response(jsonify({'error': f"'{new_location}' is already a favorite location for this user."}), 409)
 
         # Update the favorite location
         cursor.execute('''
@@ -484,17 +404,17 @@ def update_favorite():
         if cursor.rowcount == 0:
             # No rows updated, meaning old_location does not exist
             conn.close()
-            logging.warning(f"Favorite location '{old_location}' not found for user {user_id}.")
+            logger.warning(f"Favorite location '{old_location}' not found for user {user_id}.")
             return make_response(jsonify({'error': f"'{old_location}' is not a favorite location for this user."}), 404)
         
         conn.commit()
         conn.close()
 
-        logging.info(f"Favorite location '{old_location}' updated to '{new_location}' for user {user_id}.")
+        logger.info(f"Favorite location '{old_location}' updated to '{new_location}' for user {user_id}.")
         return make_response(jsonify({'status': 'success', 'message': f"'{old_location}' updated to '{new_location}'"}), 200)
 
     except Exception as e:
-        logging.error(f"Error updating favorite: {e}")
+        logger.error(f"Error updating favorite: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to clear all favorites for a user
@@ -518,7 +438,7 @@ def clear_favorites():
         user_id = data.get('user_id')
 
         if not user_id:
-            logging.warning("user_id missing in request.")
+            logger.warning("user_id missing in request.")
             return make_response(jsonify({'error': 'user_id is required'}), 400)
 
         conn = get_db_connection()
@@ -528,11 +448,11 @@ def clear_favorites():
         conn.commit()
         conn.close()
 
-        logging.info(f"All favorite locations removed for user {user_id}.")
+        logger.info(f"All favorite locations removed for user {user_id}.")
         return make_response(jsonify({'status': 'success', 'message': 'All favorite locations removed'}), 200)
 
     except Exception as e:
-        logging.error(f"Error clearing favorites: {e}")
+        logger.error(f"Error clearing favorites: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 # Route to get all favorites for a user
@@ -555,7 +475,7 @@ def get_favorites():
         user_id = request.args.get('user_id')
 
         if not user_id:
-            logging.warning("user_id missing in request.")
+            logger.warning("user_id missing in request.")
             return make_response(jsonify({'error': 'user_id is required'}), 400)
 
         conn = get_db_connection()
@@ -574,11 +494,11 @@ def get_favorites():
             {'id': fav[0], 'location': fav[1], 'created_at': fav[2], 'updated_at': fav[3]} for fav in favorites
         ]
 
-        logging.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
+        logger.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
         return make_response(jsonify({'favorites': favorite_locations}), 200)
 
     except Exception as e:
-        logging.error(f"Error fetching favorites: {e}")
+        logger.error(f"Error fetching favorites: {e}")
         return make_response(jsonify({'error': str(e)}), 500)
 
 #############################
@@ -638,25 +558,25 @@ def forecast():
     country_code = request.args.get('country_code', None)
     units = request.args.get('units', 'imperial')
 
-    logging.info(f"Forecast request received for city: {city}, country_code: {country_code}, units: {units}")
+    logger.info(f"Forecast request received for city: {city}, country_code: {country_code}, units: {units}")
 
     if not city:
-        logging.warning("Missing 'city' parameter in forecast request.")
+        logger.warning("Missing 'city' parameter in forecast request.")
         return make_response(jsonify({'error': 'City is required'}), 400)
 
     coords = get_coords(city, country_code)
     if not coords:
-        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        logger.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
         return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
 
-    logging.info(f"Coordinates for city {city}: {coords}")
+    logger.info(f"Coordinates for city {city}: {coords}")
 
     forecast_data = get_forecast(coords['lat'], coords['lon'], units)
     if forecast_data:
-        logging.info(f"Successfully fetched forecast data for city: {city}")
+        logger.info(f"Successfully fetched forecast data for city: {city}")
         return make_response(jsonify(forecast_data), 200)
     else:
-        logging.error(f"Failed to fetch forecast data for city: {city}, coordinates: {coords}")
+        logger.error(f"Failed to fetch forecast data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch forecast data'}), 500)
 
 # Route to get air pollution forecast data for a city
@@ -679,25 +599,25 @@ def air_pollution_forecast():
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
 
-    logging.info(f"Air pollution forecast request received for city: {city}, country_code: {country_code}")
+    logger.info(f"Air pollution forecast request received for city: {city}, country_code: {country_code}")
 
     if not city:
-        logging.warning("Missing 'city' parameter in air pollution forecast request.")
+        logger.warning("Missing 'city' parameter in air pollution forecast request.")
         return make_response(jsonify({'error': 'City is required'}), 400)
 
     coords = get_coords(city, country_code)
     if not coords:
-        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        logger.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
         return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
 
-    logging.info(f"Coordinates for city {city}: {coords}")
+    logger.info(f"Coordinates for city {city}: {coords}")
 
     pollution_forecast_data = get_air_pollution_forecast(coords['lat'], coords['lon'])
     if pollution_forecast_data:
-        logging.info(f"Successfully fetched air pollution forecast data for city: {city}")
+        logger.info(f"Successfully fetched air pollution forecast data for city: {city}")
         return make_response(jsonify(pollution_forecast_data), 200)
     else:
-        logging.error(f"Failed to fetch air pollution forecast data for city: {city}, coordinates: {coords}")
+        logger.error(f"Failed to fetch air pollution forecast data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch air pollution forecast data'}), 500)
 
 # Route to get current weather for a city
@@ -722,25 +642,25 @@ def current_weather():
     country_code = request.args.get('country_code', None)
     units = request.args.get('units', 'imperial')
 
-    logging.info(f"Current weather request received for city: {city}, country_code: {country_code}, units: {units}")
+    logger.info(f"Current weather request received for city: {city}, country_code: {country_code}, units: {units}")
 
     if not city:
-        logging.warning("Missing 'city' parameter in current weather request.")
+        logger.warning("Missing 'city' parameter in current weather request.")
         return make_response(jsonify({'error': 'City is required'}), 400)
 
     coords = get_coords(city, country_code)
     if not coords:
-        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        logger.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
         return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
 
-    logging.info(f"Coordinates for city {city}: {coords}")
+    logger.info(f"Coordinates for city {city}: {coords}")
 
     weather_data = get_current_weather(coords['lat'], coords['lon'], units)
     if weather_data:
-        logging.info(f"Successfully fetched current weather data for city: {city}")
+        logger.info(f"Successfully fetched current weather data for city: {city}")
         return make_response(jsonify(weather_data), 200)
     else:
-        logging.error(f"Failed to fetch current weather data for city: {city}, coordinates: {coords}")
+        logger.error(f"Failed to fetch current weather data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch current weather data'}), 500)
 
 # Route to get air pollution data for a city
@@ -763,25 +683,25 @@ def air_pollution():
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
 
-    logging.info(f"Air pollution request received for city: {city}, country_code: {country_code}")
+    logger.info(f"Air pollution request received for city: {city}, country_code: {country_code}")
 
     if not city:
-        logging.warning("Missing 'city' parameter in air pollution request.")
+        logger.warning("Missing 'city' parameter in air pollution request.")
         return make_response(jsonify({'error': 'City is required'}), 400)
 
     coords = get_coords(city, country_code)
     if not coords:
-        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        logger.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
         return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
 
-    logging.info(f"Coordinates for city {city}: {coords}")
+    logger.info(f"Coordinates for city {city}: {coords}")
 
     pollution_data = get_air_pollution(coords['lat'], coords['lon'])
     if pollution_data:
-        logging.info(f"Successfully fetched air pollution data for city: {city}")
+        logger.info(f"Successfully fetched air pollution data for city: {city}")
         return make_response(jsonify(pollution_data), 200)
     else:
-        logging.error(f"Failed to fetch air pollution data for city: {city}, coordinates: {coords}")
+        logger.error(f"Failed to fetch air pollution data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch air pollution data'}), 500)
 
 if __name__ == '__main__':

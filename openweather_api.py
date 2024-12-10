@@ -2,21 +2,12 @@
 
 import os
 import requests
-import urllib3
 from dotenv import load_dotenv
-import logging
+from utils.logger import setup_logger
 
 load_dotenv()
 API_KEY = os.getenv('OPENWEATHER_API_KEY')
-
-logging.basicConfig(
-    filename='app.log',
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
+logger = setup_logger()
 
 # Function to get coordinates (lat, lon) by city name
 def get_coords(city: str, country_code: str = None):
@@ -43,12 +34,12 @@ def get_coords(city: str, country_code: str = None):
         response = requests.get(url)
         data = response.json()
         if data:
-            logging.info(f"Found coordinates: {data[0]['lat']}, {data[0]['lon']}")
+            logger.info(f"Found coordinates: {data[0]['lat']}, {data[0]['lon']}")
             return data[0]
         else:
-            logging.warning(f"No data found for {city}.")
+            logger.warning(f"No data found for {city}.")
     except requests.exceptions.RequestException as e:
-        logging.error(f"Request failed: {e}")
+        logger.error(f"Request failed: {e}")
     return None
 
 # Function to get weather forecast
@@ -75,10 +66,10 @@ def get_forecast(lat: float, lon: float, units: str = "imperial"):
     try:
         response = requests.get(url, params=params)
         data = response.json()
-        logging.info(f"Forecast data retrieved for lat={lat}, lon={lon}")
+        logger.info(f"Forecast data retrieved for lat={lat}, lon={lon}")
         return data
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching forecast: {e}")
+        logger.error(f"Error fetching forecast: {e}")
         return None
 
 # Function to get air pollution forecast data
@@ -103,10 +94,10 @@ def get_air_pollution_forecast(lat: float, lon: float):
     try:
         response = requests.get(url, params=params)
         data = response.json()
-        logging.info(f"Air pollution forecast data retrieved for lat={lat}, lon={lon}")
+        logger.info(f"Air pollution forecast data retrieved for lat={lat}, lon={lon}")
         return data
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching air pollution forecast data: {e}")
+        logger.error(f"Error fetching air pollution forecast data: {e}")
         return None
 
 # Function to get current weather
@@ -133,10 +124,10 @@ def get_current_weather(lat: float, lon: float, units: str = "imperial"):
     try:
         response = requests.get(url, params=params)
         data = response.json()
-        logging.info(f"Current weather data retrieved for lat={lat}, lon={lon}")
+        logger.info(f"Current weather data retrieved for lat={lat}, lon={lon}")
         return data
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching current weather: {e}")
+        logger.error(f"Error fetching current weather: {e}")
         return None
 
 # Function to get air pollution
@@ -161,8 +152,8 @@ def get_air_pollution(lat: float, lon: float):
     try:
         response = requests.get(url, params=params)
         data = response.json()
-        logging.info(f"Air pollution data retrieved for lat={lat}, lon={lon}")
+        logger.info(f"Air pollution data retrieved for lat={lat}, lon={lon}")
         return data
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching air pollution data: {e}")
+        logger.error(f"Error fetching air pollution data: {e}")
         return None
