@@ -4,9 +4,6 @@ import sqlite3
 from unittest.mock import MagicMock
 from models.User import User
 from models.UserModel import UserModel
-from utils.logger import setup_logger
-
-logger = setup_logger()
 
 @pytest.fixture
 def mock_cursor(mocker):
@@ -79,7 +76,7 @@ def test_create_user_db_error(mock_cursor):
     with pytest.raises(sqlite3.Error, match="General database error"):
         UserModel.create_user(username, password)
 
-def test_create_user_invalid_username(mock_cursor):
+def test_create_user_invalid_username():
     """Test creating a user with an invalid username."""
     password = "password123"
 
@@ -89,7 +86,7 @@ def test_create_user_invalid_username(mock_cursor):
     with pytest.raises(Exception, match="Invalid input: username and password are required"):
         UserModel.create_user("", password)
 
-def test_create_user_invalid_password(mock_cursor):
+def test_create_user_invalid_password():
     """Test creating a user with an invalid password."""
     username = "test_user"
 
@@ -99,7 +96,7 @@ def test_create_user_invalid_password(mock_cursor):
     with pytest.raises(Exception, match="Invalid input: username and password are required"):
         UserModel.create_user(username, "")
 
-def test_create_user_unexpected_error(mocker, mock_cursor):
+def test_create_user_unexpected_error(mock_cursor):
     """Test unexpected error during user creation."""
     username = "test_user"
     password = "password123"
@@ -146,7 +143,7 @@ def test_delete_user_db_error(mock_cursor):
     with pytest.raises(sqlite3.Error, match="Error deleting user: SQLite error occurred"):
         UserModel.delete_user(username)
 
-def test_delete_user_invalid_username(mock_cursor):
+def test_delete_user_invalid_username():
     """Test attempting to delete a user with invalid username."""
     
     # Simulate invalid usernames (None or empty string)
