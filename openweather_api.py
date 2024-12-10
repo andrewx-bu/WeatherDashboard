@@ -81,6 +81,34 @@ def get_forecast(lat: float, lon: float, units: str = "imperial"):
         logging.error(f"Error fetching forecast: {e}")
         return None
 
+# Function to get air pollution forecast data
+def get_air_pollution_forecast(lat: float, lon: float):
+    """
+    Fetches air pollution forecast data for a location.
+
+    Args:
+        lat (float): Latitude of the location.
+        lon (float): Longitude of the location.
+
+    Returns:
+        dict: A dictionary containing air pollution forecast data.
+    """
+    url = f"http://api.openweathermap.org/data/2.5/air_pollution/forecast"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "appid": API_KEY
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        logging.info(f"Air pollution forecast data retrieved for lat={lat}, lon={lon}")
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching air pollution forecast data: {e}")
+        return None
+
 # Function to get current weather
 def get_current_weather(lat: float, lon: float, units: str = "imperial"):
     """

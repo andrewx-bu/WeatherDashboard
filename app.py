@@ -4,7 +4,7 @@ import requests
 import urllib3
 import sqlite3
 from dotenv import load_dotenv
-from openweather_api import get_coords, get_forecast, get_current_weather, get_air_pollution
+from openweather_api import get_coords, get_forecast, get_air_pollution_forecast ,get_current_weather, get_air_pollution
 import logging
 import bcrypt
 
@@ -359,7 +359,6 @@ def add_favorite():
         user_id = data.get('user_id')
         location = data.get('location')
 
-        # Validate input
         if not user_id or not location:
             logging.warning("user_id or location missing in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
@@ -375,7 +374,6 @@ def add_favorite():
                 logging.warning(f"Favorite location '{location}' already exists for user {user_id}.")
                 return make_response(jsonify({'error': f"'{location}' is already a favorite location for this user."}), 400)
 
-            # Insert the favorite location into the favorites table
             cursor.execute(
                 'INSERT INTO favorites (user_id, location) VALUES (?, ?)', 
                 (user_id, location)
@@ -416,7 +414,6 @@ def remove_favorite():
         user_id = data.get('user_id')
         location = data.get('location')
 
-        # Validate input
         if not user_id or not location:
             logging.warning("user_id or location missing in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
@@ -557,7 +554,6 @@ def get_favorites():
     try:
         user_id = request.args.get('user_id')
 
-        # Validate input
         if not user_id:
             logging.warning("user_id missing in request.")
             return make_response(jsonify({'error': 'user_id is required'}), 400)
@@ -603,6 +599,10 @@ def coords():
 
     Returns:
         Response: JSON response containing latitude and longitude.
+    
+    Raises:
+        400 error if 'city' is missing in the request.
+        500 error if there is an issue fetching coordinates.
     """
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
@@ -629,6 +629,10 @@ def forecast():
 
     Returns:
         Response: JSON response containing weather forecast.
+
+    Raises:
+        400 error if 'city' is missing in the request.
+        500 error if there is an issue fetching coordinates or forecast data.
     """
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
@@ -655,6 +659,47 @@ def forecast():
         logging.error(f"Failed to fetch forecast data for city: {city}, coordinates: {coords}")
         return make_response(jsonify({'error': 'Could not fetch forecast data'}), 500)
 
+# Route to get air pollution forecast data for a city
+@app.route('/api/air-pollution-forecast', methods=['GET'])
+def air_pollution_forecast():
+    """
+    GET: Fetch air pollution forecast data for a city.
+
+    Query Parameters:
+        - city (str): Name of the city.
+        - country_code (str, optional): Country code.
+
+    Returns:
+        Response: JSON response containing air pollution forecast data.
+    
+    Raises:
+        400 error if 'city' is missing in the request.
+        500 error if there is an issue fetching coordinates or pollution forecast data.
+    """
+    city = request.args.get('city')
+    country_code = request.args.get('country_code', None)
+
+    logging.info(f"Air pollution forecast request received for city: {city}, country_code: {country_code}")
+
+    if not city:
+        logging.warning("Missing 'city' parameter in air pollution forecast request.")
+        return make_response(jsonify({'error': 'City is required'}), 400)
+
+    coords = get_coords(city, country_code)
+    if not coords:
+        logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
+        return make_response(jsonify({'error': 'Could not fetch coordinates for the city'}), 500)
+
+    logging.info(f"Coordinates for city {city}: {coords}")
+
+    pollution_forecast_data = get_air_pollution_forecast(coords['lat'], coords['lon'])
+    if pollution_forecast_data:
+        logging.info(f"Successfully fetched air pollution forecast data for city: {city}")
+        return make_response(jsonify(pollution_forecast_data), 200)
+    else:
+        logging.error(f"Failed to fetch air pollution forecast data for city: {city}, coordinates: {coords}")
+        return make_response(jsonify({'error': 'Could not fetch air pollution forecast data'}), 500)
+
 # Route to get current weather for a city
 @app.route('/api/weather', methods=['GET'])
 def current_weather():
@@ -668,6 +713,10 @@ def current_weather():
 
     Returns:
         Response: JSON response containing current weather data.
+    
+    Raises:
+        400 error if 'city' is missing in the request.
+        500 error if there is an issue fetching coordinates or current weather data.
     """
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
@@ -706,6 +755,10 @@ def air_pollution():
 
     Returns:
         Response: JSON response containing air pollution data.
+    
+    Raises:
+        400 error if 'city' is missing in the request.
+        500 error if there is an issue fetching coordinates or air pollution data.
     """
     city = request.args.get('city')
     country_code = request.args.get('country_code', None)
@@ -716,7 +769,6 @@ def air_pollution():
         logging.warning("Missing 'city' parameter in air pollution request.")
         return make_response(jsonify({'error': 'City is required'}), 400)
 
-    # Get coordinates for the city
     coords = get_coords(city, country_code)
     if not coords:
         logging.error(f"Failed to fetch coordinates for city: {city}, country_code: {country_code}")
@@ -724,7 +776,6 @@ def air_pollution():
 
     logging.info(f"Coordinates for city {city}: {coords}")
 
-    # Fetch air pollution data using coordinates
     pollution_data = get_air_pollution(coords['lat'], coords['lon'])
     if pollution_data:
         logging.info(f"Successfully fetched air pollution data for city: {city}")
