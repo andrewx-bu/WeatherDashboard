@@ -20,12 +20,14 @@ class FavoriteModel:
             cursor = conn.cursor()
 
             # Check if the location already exists for the user
+            """
             cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, location))
             existing_favorite = cursor.fetchone()
 
             if existing_favorite:
                 logger.warning(f"Favorite location '{location}' already exists for user {user_id}.")
                 raise ValueError(f"'{location}' is already a favorite location for this user.")
+            """
 
             cursor.execute(
                 'INSERT INTO favorites (user_id, location) VALUES (?, ?)', 
@@ -79,6 +81,7 @@ class FavoriteModel:
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        """
         # Check if the new location already exists for the user
         cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, new_location))
         existing_favorite = cursor.fetchone()
@@ -87,7 +90,8 @@ class FavoriteModel:
             logger.warning(f"User {user_id} tried to add an already existing favorite: {new_location}")
             conn.close()
             raise ValueError(f"'{new_location}' is already a favorite location for this user.")
-        
+        """
+
         cursor.execute('''
             UPDATE favorites SET location = ?, updated_at = CURRENT_TIMESTAMP 
             WHERE user_id = ? AND location = ?
