@@ -13,10 +13,10 @@
 * Tong Zhang
 
 ## APi Call Route
-### Route1: /get-coords
+### Route1: openweather_api/get-coords
 * **Request Type:** GET
 * **Purpose:** Fetches the coordinates (latitude, longitude) of a city.
-* **Request Body:**
+* **Request Parameters:**
   * city (str): The name of the city.
   * country_code (str, optional): The country code. Defaults to None.
 * **Response Format:** JSON
@@ -37,10 +37,10 @@
     }
   ```
 
-### Route2: /get-forecast
+### Route2: openweather_api/get-forecast
 * **Request Type:** GET
 * **Purpose:** Fetches weather forecast.
-* **Request Body:**
+* **Request Parameters:**
   * lat (float): Latitude of the location.
   * lon (float): Longitude of the location.
   * units (str): Units of measurement (standard, metric, imperial). Defaults to "imperial".
@@ -117,10 +117,10 @@
     }
   ```
 
-### Route3: /get-air-pollution-forecast
+### Route3: openweather_api/get-air-pollution-forecast
 * **Request Type:** GET
 * **Purpose:** Fetches air pollution forecast data for a location.
-* **Request Body:**
+* **Request Parameters:**
   * lat (float): Latitude of the location.
   * lon (float): Longitude of the location.
 * **Response Format:** JSON
@@ -162,10 +162,10 @@
    }
   ```
 
-### Route4: /get-current-weather
+### Route4: openweather_api/get-current-weather
 * **Request Type:** GET
 * **Purpose:** Fetches current weather. for a location.
-* **Request Body:**
+* **Request Parameters:**
   * lat (float): Latitude of the location.
   * lon (float): Longitude of the location.
   * units (str): Units of measurement (standard, metric, imperial). Defaults to "imperial".
@@ -230,7 +230,7 @@
    }
   ```
   
-### Route5: /get-air-pollution
+### Route5: openweather_api/get-air-pollution
 * **Request Type:** GET
 * **Purpose:** Fetches current air pollution data for a location.
 * **Request Body:**
@@ -278,7 +278,7 @@
 
 ## Favorite Management
 
-### Route1: /add-favorite
+### Route1: models/FavoriteModel/add-favorite
 * **Request Type:** POST
 * **Purpose:** Add a favorite location for a user.
 * **Request Body:**
@@ -304,7 +304,7 @@
     }
   ```
 
-### Route2: /update-favorite
+### Route2: models/FavoriteModel/update-favorite
 * **Request Type:** PUT
 * **Purpose:** Update a user's favorite location.
 * **Request Body:**
@@ -331,7 +331,7 @@
     }
   ```
 
-### Route3: /remove-favorite
+### Route3: models/FavoriteModel/remove-favorite
 * **Request Type:** DELETE
 * **Purpose:** Remove a favorite location for a user.
 * **Request Body:**
@@ -352,58 +352,64 @@
 * **Example Response:**
   ```
     {
-      "message": "User 1 added new favorite location: San Francisco",
+      "message": "User 1 removed new favorite location: San Francisco",
       "status": "200"
     }
   ```
 
 
-### Route4: 
-* **Request Type:** 
-* **Purpose:**
+### Route4: models/FavoriteModel/clear-favorites
+* **Request Type:** DELETE
+* **Purpose:** Clear all favorite locations for a user.
 * **Request Body:**
-  *
-  *
+  * user_id (int): The ID of the user.
 * **Response Format:**
-  *   
-    * Code:
-    * Content: { "message": ""}
+  * Success Response Example:
+    * Code: 200
+    * Content: { "message": "User {user_id} cleared all favorite locations."}
 * **Example Request:**
   ```
     {
       "user_id": 1
-      "location": "San Francisco"
     }
   ```
 * **Example Response:**
   ```
     {
-      "message": "User 1 added new favorite location: San Francisco",
+      "message": "User 1 cleared all favorite locations.",
       "status": "200"
     }
   ```
 
-### Route5: 
-* **Request Type:** 
-* **Purpose:**
-* **Request Body:**
-  *
-  *
+### Route5: models/FavoriteModel/get-favorites
+* **Request Type:** GET
+* **Purpose:** Get all favorite locations for a user.
+* **Request Parameters:**
+  * user_id (int): The ID of the user.
 * **Response Format:**
-  *   
-    * Code:
-    * Content: { "message": ""}
+  * Success Response Example:
+    * Code: 200
+    * Content: { "message": "Fetched {len(favorites)} favorite(s) for user {user_id}."}
 * **Example Request:**
   ```
     {
       "user_id": 1
-      "location": "San Francisco"
     }
   ```
 * **Example Response:**
   ```
     {
-      "message": "User 1 added new favorite location: San Francisco",
+      "favorites": [
+        {
+          "location": "New York",
+        },
+        {
+          "location": "San Francisco",
+        }
+      ],
       "status": "200"
     }
   ```
+  
+## User Management
+![RouteScreenshot](static/image/User Management Route.png)
