@@ -3,6 +3,7 @@ import sqlite3
 from flask import Flask, request, make_response, jsonify
 from dotenv import load_dotenv
 from models.UserModel import UserModel
+from models.FavoriteModel import FavoriteModel
 from openweather_api import get_coords, get_forecast, get_air_pollution_forecast ,get_current_weather, get_air_pollution
 from utils.logger import setup_logger
 from utils.sql import get_db_connection
@@ -274,26 +275,14 @@ def add_favorite():
             logger.warning("user_id or location missing in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
 
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-
-            # Check if the location already exists for the user
-            cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, location))
-            existing_favorite = cursor.fetchone()
-
-            if existing_favorite:
-                logger.warning(f"Favorite location '{location}' already exists for user {user_id}.")
-                return make_response(jsonify({'error': f"'{location}' is already a favorite location for this user."}), 400)
-
-            cursor.execute(
-                'INSERT INTO favorites (user_id, location) VALUES (?, ?)', 
-                (user_id, location)
-            )
-            conn.commit()
-
-        logger.info(f"Favorite location '{location}' added for user {user_id}.")
-        return make_response(jsonify({'status': 'success', 'message': 'Favorite location added'}), 201)
-
+        try:
+            FavoriteModel.add_favorite(user_id, location)
+            logger.info(f"Favorite location '{location}' added for user {user_id}.")
+            return make_response(jsonify({'status': 'success', 'message': 'Favorite location added'}), 201)
+        except ValueError as e:
+            logger.warning(f"Error adding favorite for user {user_id}: {e}")
+            return make_response(jsonify({'error': str(e)}), 400)
+        
     except sqlite3.IntegrityError as e:
         # Catch foreign key violation
         if "FOREIGN KEY constraint failed" in str(e):
@@ -326,28 +315,16 @@ def remove_favorite():
         location = data.get('location')
 
         if not user_id or not location:
-            logger.warning("user_id or location missing in request.")
+            logger.warning("Missing user_id or location in request.")
             return make_response(jsonify({'error': 'user_id and location are required'}), 400)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Check if the location exists for the user
-        cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, location))
-        favorite = cursor.fetchone()
-
-        if not favorite:
-            logger.warning(f"Favorite location '{location}' not found for user {user_id}.")
-            return make_response(jsonify({'error': f"'{location}' is not a favorite location for this user."}), 400)
-
-        # Remove the favorite location from the database
-        cursor.execute('DELETE FROM favorites WHERE user_id = ? AND location = ?', (user_id, location))
-
-        conn.commit()
-        conn.close()
-
-        logger.info(f"Favorite location '{location}' removed for user {user_id}.")
-        return make_response(jsonify({'status': 'success', 'message': 'Favorite location removed'}), 200)
+        try:
+            FavoriteModel.remove_favorite(user_id, location)
+            logger.info(f"Favorite location '{location}' removed for user {user_id}.")
+            return make_response(jsonify({'status': 'success', 'message': 'Favorite location removed'}), 200)
+        except ValueError as e:
+            logger.warning(f"Error removing favorite for user {user_id}: {e}")
+            return make_response(jsonify({'error': str(e)}), 400)
 
     except Exception as e:
         logger.error(f"Error removing favorite: {e}")
@@ -380,38 +357,16 @@ def update_favorite():
         new_location = data.get('new_location')
 
         if not user_id or not old_location or not new_location:
-            logger.warning("Missing user_id, old_location, or new_location.")
+            logger.warning("Missing user_id, old_location, or new_location in request.")
             return make_response(jsonify({'error': 'user_id, old_location, and new_location are required'}), 400)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Check if the new location already exists as a favorite for the user
-        cursor.execute('SELECT id FROM favorites WHERE user_id = ? AND location = ?', (user_id, new_location))
-        existing_favorite = cursor.fetchone()
-        if existing_favorite:
-            conn.close()
-            logger.warning(f"User {user_id} attempted to update favorite location to an already existing favorite: '{new_location}'.")
-            return make_response(jsonify({'error': f"'{new_location}' is already a favorite location for this user."}), 409)
-
-        # Update the favorite location
-        cursor.execute('''
-            UPDATE favorites SET location = ?, updated_at = CURRENT_TIMESTAMP 
-            WHERE user_id = ? AND location = ?
-        ''', (new_location, user_id, old_location)
-        )
-
-        if cursor.rowcount == 0:
-            # No rows updated, meaning old_location does not exist
-            conn.close()
-            logger.warning(f"Favorite location '{old_location}' not found for user {user_id}.")
-            return make_response(jsonify({'error': f"'{old_location}' is not a favorite location for this user."}), 404)
-        
-        conn.commit()
-        conn.close()
-
-        logger.info(f"Favorite location '{old_location}' updated to '{new_location}' for user {user_id}.")
-        return make_response(jsonify({'status': 'success', 'message': f"'{old_location}' updated to '{new_location}'"}), 200)
+        try:
+            FavoriteModel.update_favorite(user_id, old_location, new_location)
+            logger.info(f"Favorite location updated from '{old_location}' to '{new_location}' for user {user_id}.")
+            return make_response(jsonify({'status': 'success', 'message': f"'{old_location}' updated to '{new_location}'"}), 200)
+        except ValueError as e:
+            logger.warning(f"Error updating favorite for user {user_id}: {e}")
+            return make_response(jsonify({'error': str(e)}), 400)
 
     except Exception as e:
         logger.error(f"Error updating favorite: {e}")
@@ -438,18 +393,16 @@ def clear_favorites():
         user_id = data.get('user_id')
 
         if not user_id:
-            logger.warning("user_id missing in request.")
+            logger.warning("Missing user_id in request.")
             return make_response(jsonify({'error': 'user_id is required'}), 400)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('DELETE FROM favorites WHERE user_id = ?', (user_id,))
-        conn.commit()
-        conn.close()
-
-        logger.info(f"All favorite locations removed for user {user_id}.")
-        return make_response(jsonify({'status': 'success', 'message': 'All favorite locations removed'}), 200)
+        try:
+            FavoriteModel.clear_favorites(user_id)
+            logger.info(f"All favorites cleared for user {user_id}.")
+            return make_response(jsonify({'status': 'success', 'message': 'All favorite locations removed'}), 200)
+        except Exception as e:
+            logger.error(f"Error clearing favorites for user {user_id}: {e}")
+            return make_response(jsonify({'error': str(e)}), 500)
 
     except Exception as e:
         logger.error(f"Error clearing favorites: {e}")
@@ -475,27 +428,22 @@ def get_favorites():
         user_id = request.args.get('user_id')
 
         if not user_id:
-            logger.warning("user_id missing in request.")
+            logger.warning("Missing user_id in request.")
             return make_response(jsonify({'error': 'user_id is required'}), 400)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        try:
+            favorites = FavoriteModel.get_favorites(user_id)
+            if not favorites:
+                return make_response(jsonify({'message': 'No favorites found'}), 404)
 
-        # Query to get all favorites for the user
-        cursor.execute('SELECT id, location, created_at, updated_at FROM favorites WHERE user_id = ?', (user_id,))
-        favorites = cursor.fetchall()
-
-        conn.close()
-
-        if not favorites:
-            return make_response(jsonify({'message': 'No favorites found'}), 404)
-
-        favorite_locations = [
-            {'id': fav[0], 'location': fav[1], 'created_at': fav[2], 'updated_at': fav[3]} for fav in favorites
-        ]
-
-        logger.info(f"Fetched {len(favorite_locations)} favorites for user {user_id}.")
-        return make_response(jsonify({'favorites': favorite_locations}), 200)
+            favorite_locations = [
+                {'id': fav[0], 'location': fav[1], 'created_at': fav[2], 'updated_at': fav[3]} for fav in favorites
+            ]
+            logger.info(f"Returning {len(favorites)} favorites for user {user_id}.")
+            return make_response(jsonify({'favorites': favorite_locations}), 200)
+        except Exception as e:
+            logger.error(f"Error fetching favorites for user {user_id}: {e}")
+            return make_response(jsonify({'error': str(e)}), 500)
 
     except Exception as e:
         logger.error(f"Error fetching favorites: {e}")
