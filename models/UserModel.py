@@ -20,6 +20,8 @@ class UserModel:
         Raises:
             sqlite3.Error: For general database errors.
         """
+        if not username or not password:
+            raise Exception(f"Invalid input: username and password are required")
         try:
             salt = bcrypt.gensalt()
             password_hash = bcrypt.hashpw(password.encode('utf-8'), salt)
@@ -33,6 +35,9 @@ class UserModel:
             conn.commit()
             conn.close()
             logger.info(f"User '{username}' created successfully.")
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Integrity error creating user '{username}': {e}")
+            raise sqlite3.IntegrityError(f"User '{username}' already exists: {str(e)}")
         except sqlite3.Error as e:
             logger.error(f"SQLite error creating user '{username}': {e}")
             raise sqlite3.Error(f"Error creating user: {str(e)}")
@@ -51,6 +56,8 @@ class UserModel:
         Raises:
             sqlite3.Error: For general database errors.
         """
+        if not username:
+            raise Exception(f"Invalid input: username is required")
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
