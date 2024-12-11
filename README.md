@@ -1,18 +1,79 @@
-# CS411 Final Group Project 
-## Weather Dashboard Application
+# CS411 Final Project: Weather Dashboard
+## Project Description
 ### Overview
-* The Weather Dashboard is a Flask-based application designed to provide users with easy access to weather information.
-* This application allows users to set favorite locations and quickly view current and forecasted weather and air pollution data for these locations.
-* By offering userspecific customization, the Weather Dashboard aims to deliver a personalized weather tracking experience, making it easier for users to get the most relevant weather information based on their interests and needs.
-* Database: MySQL
-
-### Contributors
+The Weather Dashboard is a user-friendly web application designed to provide quick access to weather information for selected locations. Users can save their favorite locations and view detailed weather data, including current conditions, forecasts, and air pollution levels.
+#### Key Features:
+* Display real-time weather information.
+* Provide weather forecasts for selected locations.
+* Include air pollution data for added insights.
+* Allow users to set and manage favorite locations.
+#### Tech Stack:
+* Backend Framework: Flask
+* Database: SQLite
+#### Contributors
 * Andrew Xin
 * Jeremy Lau
 * Sarah Lam
 * Tong Zhang
+## How to Run
+### Steps to Run the Application
+#### For Mac Users:
+1. **Download or Clone the Repository**
+2. **Add .env File**
+- Get a free API key from [OpenWeather](https://openweathermap.org/api).
+- Navigate to the root directory `WeatherDashboard/`.
+- Create a `.env` file with the following content:
+  ```
+  OPENWEATHER_API_KEY=[INSERT YOUR KEY HERE]
+  ```
+3. **Run with Docker**
+- Navigate to the root directory `WeatherDashboard/`.
+- Run the `run_docker.sh` script:
+  ```
+  sh run_docker.sh
+  ```
+4. **Alternatively, Run Locally**
+- Set up a virtual environment by running the `setup_venv.sh` script:
+  ```
+  sh setup_venv.sh
+  ```
+- This will install all dependencies listed in `requirements.txt`.
+- Make sure to activate the virtual environment.
+- Set up the database by running the `setup_db.py` script:
+  ```
+  python setup_db.py
+  ```
+- This will create the `weather.db` file in the `WeatherDashboard/db` directory if it does not already exist.
+- Run the application by executing the `app.py` file:
+  ```
+  python app.py
+  ```
+## How to Test
+### Smoke Test (route testing)
+1. Ensure the database is set up and the application is running.
+2. Navigate to the root directory `WeatherDashboard/`.
+3. Run the `smoketest.sh` script:
+    ```
+    sh smoketest.sh
+    ```
+- This script sends basic `curl` commands to every application route to verify that the app is functioning correctly.
+- **Notes**:
+  - The `weather.db` file must exist.
+  - The app must be running.
+  - Ensure there is no user named `testuser0` in the database before running the test.
+- After testing favorites, the script will delete the test user to avoid leaving garbage data in the database.
+- If needed, you can delete the `weather.db` file and rerun `setup_db.py` to reset the database.
+### Unit Tests
+1. Navigate to the root directory `WeatherDashboard/`.
+2. Ensure you have `pytest` and other dependencies installed, or activate the virtual environment
+3. Run the unit tests using `pytest`:
+    ```
+    pytest
+    ```
+- The unit tests for `User`, `UserModel`, and `FavoriteModel` are located in the `WeatherDashboard/test` directory.
 
-## API Call Route
+
+## API Routes
 ### Route1: /api/coords
 * **Request Type:** GET
 * **Purpose:** Fetches the coordinates (latitude, longitude) of a city.
@@ -36,7 +97,7 @@
     }
   ```
 
-### Route2: app/forecast
+### Route2: /api/forecast
 * **Request Type:** GET
 * **Purpose:** Fetches weather forecast.
 * **Request Parameters:**
@@ -116,7 +177,7 @@
     }
   ```
 
-### Route3: app/air-pollution-forecast
+### Route3: /api/air-pollution-forecast
 * **Request Type:** GET
 * **Purpose:** Fetches air pollution forecast data for a location.
 * **Request Parameters:**
@@ -161,7 +222,7 @@
    }
   ```
 
-### Route4: app/current-weather
+### Route4: /api/current-weather
 * **Request Type:** GET
 * **Purpose:** Fetches current weather. for a location.
 * **Request Parameters:**
@@ -229,7 +290,7 @@
    }
   ```
   
-### Route5: app/air-pollution
+### Route5: /api/air-pollution
 * **Request Type:** GET
 * **Purpose:** Fetches current air pollution data for a location.
 * **Request Body:**
@@ -277,7 +338,7 @@
 
 ## Favorite Management
 
-### Route1: app/add-favorite
+### Route1: /api/add-favorite
 * **Request Type:** POST
 * **Purpose:** Add a favorite location for a user.
 * **Request Body:**
@@ -309,7 +370,7 @@
     }
   ```
 
-### Route2: app/update-favorite
+### Route2: /api/update-favorite
 * **Request Type:** PUT
 * **Purpose:** Update a user's favorite location.
 * **Request Body:**
@@ -342,7 +403,7 @@
     }
   ```
 
-### Route3: app/remove-favorite
+### Route3: /api/remove-favorite
 * **Request Type:** DELETE
 * **Purpose:** Remove a favorite location for a user.
 * **Request Body:**
@@ -375,7 +436,7 @@
   ```
 
 
-### Route4: app/clear-favorites
+### Route4: /api/clear-favorites
 * **Request Type:** DELETE
 * **Purpose:** Clear all favorite locations for a user.
 * **Request Body:**
@@ -404,7 +465,7 @@
     }
   ```
 
-### Route5: app/get-favorites
+### Route5: /api/get-favorites
 * **Request Type:** GET
 * **Purpose:** Get all favorite locations for a user.
 * **Request Parameters:**
@@ -451,7 +512,7 @@
 
   
 ## User Management
-### Route1: app/create-user
+### Route1: /create-user
 * **Request Type:** POST
 * **Purpose:** Creates a new user in the database with the given username and password. The password is hashed before being stored.
 * **Request Parameters:**
@@ -477,7 +538,7 @@
     }
   ```
 
-### Route2: app/login
+### Route2: /login
 * **Request Type:** GET
 * **Purpose:** Authenticates a user by verifying the provided password with the stored hash.
 * **Request Parameters:**
@@ -502,7 +563,7 @@
     }
   ```
 
-### Route3: app/update-password
+### Route3: /update-password
 * **Request Type:** PUT
 * **Purpose:** Updates the password for an existing user account.
 * **Request Body:**
