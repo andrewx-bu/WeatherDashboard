@@ -3,3 +3,4 @@
 db/weather.db
 __pycache__/
 app.log
+.pytest_cache
