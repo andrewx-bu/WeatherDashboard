@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BASE_URL="http://127.0.0.1:5000"
+BASE_URL="http://127.0.0.1:5001"
 BASE_URL_API="$BASE_URL/api"
 
 ECHO_JSON=false
@@ -38,7 +38,7 @@ get_user_id() {
 check_health() {
   echo "Checking health status..."
   response=$(curl -s -X GET "$BASE_URL_API/health")
-  if echo "$response" | grep -q '"status": "healthy"'; then
+  if echo "$response" | grep -q '"status":"healthy"'; then
     echo "Service is healthy."
   else
     echo "Health check failed."
@@ -50,7 +50,7 @@ check_health() {
 check_db() {
   echo "Checking database connection..."
   response=$(curl -s -X GET "$BASE_URL_API/db-check")
-  if echo "$response" | grep -q '"database_status": "healthy"'; then
+  if echo "$response" | grep -q '"database_status":"healthy"'; then
     echo "Database connection is healthy."
   else
     echo "Database check failed."
@@ -73,7 +73,7 @@ create_user() {
   response=$(curl -s -X POST "$BASE_URL/create-account" -H "Content-Type: application/json" \
     -d "{\"username\": \"$username\", \"password\": \"$password\"}")
   
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "User created successfully."
   else
     echo "Failed to create user."
@@ -90,7 +90,7 @@ login_user() {
   response=$(curl -s -X GET "$BASE_URL/login" -H "Content-Type: application/json" \
     -d "{\"username\": \"$username\", \"password\": \"$password\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "Login successful."
   else
     echo "Failed to log in."
@@ -108,7 +108,7 @@ update_password() {
   response=$(curl -s -X PUT "$BASE_URL/update-password" -H "Content-Type: application/json" \
     -d "{\"username\": \"$username\", \"old_password\": \"$old_password\", \"new_password\": \"$new_password\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "Password updated successfully."
   else
     echo "Failed to update password."
@@ -142,7 +142,7 @@ delete_user() {
   response=$(curl -s -X DELETE "$BASE_URL/delete-account" -H "Content-Type: application/json" \
     -d "{\"username\": \"$username\", \"password\": \"$password\"}")
   
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "User deleted successfully."
   else
     echo "Failed to delete user."
@@ -165,7 +165,7 @@ add_favorite() {
   response=$(curl -s -X POST "$BASE_URL_API/add-favorite" -H "Content-Type: application/json" \
     -d "{\"user_id\": \"$user_id\", \"location\": \"$location\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "Favorite location added successfully."
   else
     echo "Failed to add favorite location."
@@ -181,7 +181,7 @@ remove_favorite() {
   response=$(curl -s -X DELETE "$BASE_URL_API/remove-favorite" -H "Content-Type: application/json" \
     -d "{\"user_id\": \"$user_id\", \"location\": \"$location\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "Favorite location removed successfully."
     if [ "$ECHO_JSON" = true ]; then
       echo "Response JSON:"
@@ -202,7 +202,7 @@ update_favorite() {
   response=$(curl -s -X PUT "$BASE_URL_API/update-favorite" -H "Content-Type: application/json" \
     -d "{\"user_id\": \"$user_id\", \"old_location\": \"$old_location\", \"new_location\": \"$new_location\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "Favorite location updated successfully."
     if [ "$ECHO_JSON" = true ]; then
       echo "Response JSON:"
@@ -221,7 +221,7 @@ clear_favorites() {
   response=$(curl -s -X DELETE "$BASE_URL_API/clear-favorites" -H "Content-Type: application/json" \
     -d "{\"user_id\": \"$user_id\"}")
 
-  if echo "$response" | grep -q '"status": "success"'; then
+  if echo "$response" | grep -q "success"; then
     echo "All favorites cleared successfully."
     if [ "$ECHO_JSON" = true ]; then
       echo "Response JSON:"
@@ -240,7 +240,7 @@ get_favorites() {
   echo "Fetching favorite locations for user: $user_id"
   response=$(curl -s -G "$BASE_URL_API/get-favorites" --data-urlencode "user_id=$user_id")
 
-  if echo "$response" | grep -q '"favorites"'; then
+  if echo "$response" | grep -q "favorites"; then
     echo "Favorites retrieved successfully."
     if [ "$ECHO_JSON" = true ]; then
       echo "Favorites JSON:"

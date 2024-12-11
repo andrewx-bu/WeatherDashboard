@@ -1,5 +1,5 @@
 .env
 .venv
-weather.db
+db/weather.db
 __pycache__/
 app.log

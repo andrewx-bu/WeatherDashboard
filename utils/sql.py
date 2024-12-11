@@ -14,7 +14,7 @@ def get_db_connection():
         sqlite3.Error: If there is an issue with the database connection.
     """
     try:
-        conn = sqlite3.connect('weather.db')
+        conn = sqlite3.connect('db/weather.db')
         conn.execute('PRAGMA foreign_keys = ON;')
         return conn
     except sqlite3.Error as e:

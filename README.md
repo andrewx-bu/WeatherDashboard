@@ -1,7 +1,7 @@
 # CS411 Final Group Project 
 ## Weather Dashboard Application
 ### Overview
-* The Weather Dashboard is a web-based application designed to provide users with easy access to weather information.
+* The Weather Dashboard is a Flask-based application designed to provide users with easy access to weather information.
 * This application allows users to set favorite locations and quickly view current and forecasted weather and air pollution data for these locations.
 * By offering userspecific customization, the Weather Dashboard aims to deliver a personalized weather tracking experience, making it easier for users to get the most relevant weather information based on their interests and needs.
 * Database: MySQL
@@ -12,8 +12,8 @@
 * Sarah Lam
 * Tong Zhang
 
-## APi Call Route
-### Route1: app/coords
+## API Call Route
+### Route1: /api/coords
 * **Request Type:** GET
 * **Purpose:** Fetches the coordinates (latitude, longitude) of a city.
 * **Request Parameters:**

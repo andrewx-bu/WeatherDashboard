@@ -5,7 +5,7 @@ def setup_database():
     # Set up the SQLite database with the necessary tables and foreign key constraints.
     try:
         # Connect to SQLite database
-        conn = sqlite3.connect('weather.db')
+        conn = sqlite3.connect('db/weather.db')
         cursor = conn.cursor()
 
         # Enable foreign key support

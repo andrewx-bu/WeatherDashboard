@@ -652,4 +652,4 @@ def air_pollution():
         return make_response(jsonify({'error': 'Could not fetch air pollution data'}), 500)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001)
