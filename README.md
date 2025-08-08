@@ -1,7 +1,7 @@
 # CS411 Final Project: Weather Dashboard
 ## Project Description
 ### Overview
-The Weather Dashboard is a user-friendly web application designed to provide quick access to weather information for selected locations. Users can save their favorite locations and view detailed weather data, including current conditions, forecasts, and air pollution levels.
+The Weather Dashboard is a Flask-based REST API that delivers comprehensive weather data through OpenWeather API integration. The application features secure user authentication, persistent favorite location management, and provides current weather conditions, 5-day forecasts, and air quality metrics with full Docker containerization.
 #### Key Features:
 * Display real-time weather information.
 * Provide weather forecasts for selected locations.
@@ -10,6 +10,10 @@ The Weather Dashboard is a user-friendly web application designed to provide qui
 #### Tech Stack:
 * Backend Framework: Flask
 * Database: SQLite
+* Security: bcrypt
+* Deployment: Docker
+* Testing: pytest
+* External APIs: OpenWeather API
 #### Contributors
 * Andrew Xin
 * Jeremy Lau
@@ -586,4 +590,5 @@ The Weather Dashboard is a user-friendly web application designed to provide qui
       "message": "Password updated",
       "status": "success"
     }
+
   ```
